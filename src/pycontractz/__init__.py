@@ -1,6 +1,7 @@
 from .assertion_kind import AssertionKind
 from .contract_violation import ContractViolation
 from .contract_violation_exception import ContractViolationException
+from .default_contract_violation_handler import default_contract_violation_handler
 from .detection_mode import DetectionMode
 from .evaluation_semantic import EvaluationSemantic
 from .raising_contract_violation_handler import raising_contract_violation_handler
