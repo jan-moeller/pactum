@@ -249,7 +249,7 @@ def post(predicate):
             assertion_kwargs = {name: result for name in pred_params.keys()}
             __assert_contract(
                 semantic=semantic,
-                kind=AssertionKind.pre,
+                kind=AssertionKind.post,
                 loc=loc,
                 predicate=predicate,
                 predicate_args=(),
