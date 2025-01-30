@@ -1,0 +1,16 @@
+[project]
+name = "pycontractz"
+version = "0.0.0"
+requires-python = ">= 3.13"
+readme = "README.md"
+dependencies = []
+
+[project.optional-dependencies]
+tests = ["pytest"]
+
+[tool.black]
+target-version = ["py313"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
