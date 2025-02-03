@@ -33,10 +33,12 @@ def __promote_positional_arguments_to_keyword_arguments(
     for i in range(min(len(params), len(args))):
         name = params[i][0]
         param = params[i][1]
-        if param.kind == Parameter.VAR_POSITIONAL:
-            matched_args.extend(args[i:])
-        else:
-            matched_kwargs[name] = args[i]
+        match param.kind:
+            case Parameter.VAR_POSITIONAL:
+                matched_args.extend(args[i:])
+                break  # Everything after must be keyword arguments
+            case _:
+                matched_kwargs[name] = args[i]
 
     matched_kwargs.update(kwargs)
 

@@ -1,3 +1,5 @@
+import inspect
+
 import pytest
 
 from pycontractz import (
@@ -9,6 +11,7 @@ from pycontractz import (
     set_contract_evaluation_semantics,
     set_contract_violation_handler,
 )
+from pycontractz.decorators import __promote_positional_arguments_to_keyword_arguments
 
 set_contract_evaluation_semantics(EvaluationSemantic.observe)
 set_contract_violation_handler(raising_contract_violation_handler)
@@ -16,6 +19,53 @@ set_contract_violation_handler(raising_contract_violation_handler)
 
 def __raise(exception):
     raise exception
+
+
+def test_promote_positional_arguments_to_keyword_arguments():
+    def foo(*args, **kwargs):
+        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
+            args, kwargs, inspect.signature(foo)
+        )
+        assert nargs == (1, 2, 3)
+        assert len(nkwargs) == 0
+
+    foo(1, 2, 3)
+
+    def foo(*args, **kwargs):
+        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
+            args, kwargs, inspect.signature(foo)
+        )
+        assert nargs == ()
+        assert nkwargs == {"x": 1, "y": 2}
+
+    foo(x=1, y=2)
+
+    def foo(*args, **kwargs):
+        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
+            args, kwargs, inspect.signature(foo)
+        )
+        assert nargs == (1, 2)
+        assert nkwargs == {"x": 3, "y": 4}
+
+    foo(1, 2, x=3, y=4)
+
+    def foo(a, *args, b, **kwargs):
+        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
+            (a,) + args, {"b": b} | kwargs, inspect.signature(foo)
+        )
+        assert nargs == (2,)
+        assert nkwargs == {"a": 1, "b": 3, "c": 4}
+
+    foo(1, 2, b=3, c=4)
+
+    def foo(a, /, b, *args, c, **kwargs):
+        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
+            (a,) + args, {"b": b, "c": c} | kwargs, inspect.signature(foo)
+        )
+        assert nargs == ()
+        assert nkwargs == {"a": 1, "b": 2, "c": 3, "d": 4}
+
+    foo(1, 2, c=3, d=4)
 
 
 def test_pre_predicate_false():
