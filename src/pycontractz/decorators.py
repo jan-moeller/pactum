@@ -1,6 +1,5 @@
 import copy
 import inspect
-import sys
 from functools import wraps
 from inspect import Parameter
 from typing import Any
@@ -84,7 +83,6 @@ def __handle_contract_violation(
     kind: AssertionKind,
     location: inspect.Traceback,
     comment: str = "",
-    evaluation_exception: Exception | None = None,
 ):
     """Handles a contract violation by invoking the contract violation handler and/or terminating if required"""
 
@@ -94,17 +92,13 @@ def __handle_contract_violation(
     violation = ContractViolation(
         comment=comment,
         detection_mode=mode,
-        evaluation_exception=evaluation_exception,
         kind=kind,
         location=location,
         semantic=semantic,
     )
 
-    if semantic in [EvaluationSemantic.observe, EvaluationSemantic.enforce]:
+    if semantic == EvaluationSemantic.check:
         invoke_contract_violation_handler(violation)
-
-    if violation.is_terminating:
-        sys.exit(1)
 
 
 def __assert_contract(
@@ -114,30 +108,16 @@ def __assert_contract(
     predicate,
     predicate_kwargs: dict[str, Any],
 ):
-    """Evaluates the given predicate and handles a contract violation if the result was false or an exception escaped
+    """Evaluates the given predicate and handles a contract violation if the result was false"""
 
-    `predicate_args` and `predicate_kwargs` are assumed to be the output of
-    `__promote_positional_arguments_to_keyword_arguments`.
-    """
-
-    try:
-        pred_result = predicate(**predicate_kwargs)
-    except Exception as exc:
+    pred_result = predicate(**predicate_kwargs)
+    if not pred_result:
         __handle_contract_violation(
             semantic=semantic,
-            mode=DetectionMode.evaluation_exception,
-            evaluation_exception=exc,
+            mode=DetectionMode.predicate_false,
             kind=kind,
             location=loc,
         )
-    else:
-        if not pred_result:
-            __handle_contract_violation(
-                semantic=semantic,
-                mode=DetectionMode.predicate_false,
-                kind=kind,
-                location=loc,
-            )
 
 
 def __assert_predicate_well_formed(

@@ -9,7 +9,7 @@ from pycontractz.default_contract_violation_handler import (
 )
 
 __contract_violation_handler = default_contract_violation_handler
-__assertion_semantics = {k: EvaluationSemantic.enforce for k in AssertionKind}
+__assertion_semantics = {k: EvaluationSemantic.check for k in AssertionKind}
 
 
 def invoke_contract_violation_handler(violation: ContractViolation):

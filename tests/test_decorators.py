@@ -1,4 +1,3 @@
-import inspect
 from warnings import deprecated
 
 import pytest
@@ -13,7 +12,7 @@ from pycontractz import (
     set_contract_violation_handler,
 )
 
-set_contract_evaluation_semantics(EvaluationSemantic.observe)
+set_contract_evaluation_semantics(EvaluationSemantic.check)
 set_contract_violation_handler(raising_contract_violation_handler)
 
 THE_ANSWER = [42]
@@ -135,7 +134,7 @@ def test_pre_exception():
     def test():
         pass
 
-    with pytest.raises(ContractViolationException):
+    with pytest.raises(ValueError):
         test()
 
 
@@ -272,7 +271,7 @@ def test_post_exception():
     def test():
         pass
 
-    with pytest.raises(ContractViolationException):
+    with pytest.raises(ValueError):
         test()
 
 
