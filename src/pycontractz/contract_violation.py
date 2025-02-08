@@ -1,7 +1,6 @@
 import inspect
 
 from pycontractz.assertion_kind import AssertionKind
-from pycontractz.detection_mode import DetectionMode
 from pycontractz.evaluation_semantic import EvaluationSemantic
 
 
@@ -13,13 +12,11 @@ class ContractViolation:
     def __init__(
         self,
         comment: str,
-        detection_mode: DetectionMode,
         kind: AssertionKind,
         location: inspect.Traceback,
         semantic: EvaluationSemantic,
     ):
         self.comment = comment
-        self.detection_mode = detection_mode
         self.kind = kind
         self.location = location
         self.semantic = semantic

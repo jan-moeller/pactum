@@ -11,7 +11,6 @@ from pycontractz.contract_violation_handler import (
     get_contract_evaluation_semantic,
     invoke_contract_violation_handler,
 )
-from pycontractz.detection_mode import DetectionMode
 from pycontractz.utils.map_function_arguments import map_function_arguments
 
 
@@ -79,7 +78,6 @@ def __call_predicate(
 
 def __handle_contract_violation(
     semantic: EvaluationSemantic,
-    mode: DetectionMode,
     kind: AssertionKind,
     location: inspect.Traceback,
     comment: str = "",
@@ -91,7 +89,6 @@ def __handle_contract_violation(
 
     violation = ContractViolation(
         comment=comment,
-        detection_mode=mode,
         kind=kind,
         location=location,
         semantic=semantic,
@@ -114,7 +111,6 @@ def __assert_contract(
     if not pred_result:
         __handle_contract_violation(
             semantic=semantic,
-            mode=DetectionMode.predicate_false,
             kind=kind,
             location=loc,
         )
