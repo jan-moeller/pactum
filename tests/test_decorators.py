@@ -1,4 +1,5 @@
 import inspect
+from warnings import deprecated
 
 import pytest
 
@@ -11,61 +12,15 @@ from pycontractz import (
     set_contract_evaluation_semantics,
     set_contract_violation_handler,
 )
-from pycontractz.decorators import __promote_positional_arguments_to_keyword_arguments
 
 set_contract_evaluation_semantics(EvaluationSemantic.observe)
 set_contract_violation_handler(raising_contract_violation_handler)
 
+THE_ANSWER = [42]
+
 
 def __raise(exception):
     raise exception
-
-
-def test_promote_positional_arguments_to_keyword_arguments():
-    def foo(*args, **kwargs):
-        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
-            args, kwargs, inspect.signature(foo)
-        )
-        assert nargs == (1, 2, 3)
-        assert len(nkwargs) == 0
-
-    foo(1, 2, 3)
-
-    def foo(*args, **kwargs):
-        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
-            args, kwargs, inspect.signature(foo)
-        )
-        assert nargs == ()
-        assert nkwargs == {"x": 1, "y": 2}
-
-    foo(x=1, y=2)
-
-    def foo(*args, **kwargs):
-        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
-            args, kwargs, inspect.signature(foo)
-        )
-        assert nargs == (1, 2)
-        assert nkwargs == {"x": 3, "y": 4}
-
-    foo(1, 2, x=3, y=4)
-
-    def foo(a, *args, b, **kwargs):
-        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
-            (a,) + args, {"b": b} | kwargs, inspect.signature(foo)
-        )
-        assert nargs == (2,)
-        assert nkwargs == {"a": 1, "b": 3, "c": 4}
-
-    foo(1, 2, b=3, c=4)
-
-    def foo(a, /, b, *args, c, **kwargs):
-        nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
-            (a,) + args, {"b": b, "c": c} | kwargs, inspect.signature(foo)
-        )
-        assert nargs == ()
-        assert nkwargs == {"a": 1, "b": 2, "c": 3, "d": 4}
-
-    foo(1, 2, c=3, d=4)
 
 
 def test_pre_predicate_false():
@@ -110,7 +65,7 @@ def test_pre_predicate_with_named_arguments():
 
 def test_pre_predicate_with_args():
 
-    @pre(lambda *args: len(args) > 0)
+    @pre(lambda args: len(args) > 0)
     def test(*args):
         return args[0]
 
@@ -120,26 +75,27 @@ def test_pre_predicate_with_args():
     with pytest.raises(ContractViolationException):
         test()
 
-    with pytest.raises(ContractViolationException):
+    @pre(lambda args: len(args) > 0)
+    def test(*args):
+        return args[0]
 
-        @pre(lambda *args: True)
-        def test(x, /):
-            return x
+    assert test(42) == 42
+    assert test(42, 19) == 42
 
 
 def test_pre_predicate_with_kwargs():
 
-    @pre(lambda **kwargs: "x" in kwargs)
+    @pre(lambda kwargs: "y" in kwargs)
     def test(x, **kwargs):
         return x
 
-    assert test(x=42) == 42
-    assert test(x=42, y="foobar") == 42
+    assert test(x=42, y=1) == 42
+    assert test(x=42, y="foobar", z=3) == 42
 
     with pytest.raises(ContractViolationException):
-        test()
+        test(x=42)
 
-    with pytest.raises(ContractViolationException):
+    with pytest.raises(TypeError):
         test(y=9)
 
 
@@ -148,9 +104,9 @@ def test_pre_predicate_with_mixed_arguments():
     @pre(lambda x: x > 0)
     @pre(lambda y: y > 10)
     @pre(lambda y, x: x + y < 100)
-    @pre(lambda *args, x, **kwargs: True)
-    @pre(lambda *args: len(args) > 0)
-    @pre(lambda **kwargs: len(kwargs) > 2)
+    @pre(lambda args, x, kwargs: True)
+    @pre(lambda args: len(args) > 0)
+    @pre(lambda kwargs: len(kwargs) >= 1)
     def test(x, /, y, *args, z=0, **kwargs):
         return x + y + z
 
@@ -185,15 +141,60 @@ def test_pre_exception():
 
 def test_pre_predicate_invalid():
 
-    with pytest.raises(ContractViolationException):
+    with pytest.raises(TypeError):
 
         @pre(lambda x: x == 0)
         def test():
             pass
 
 
+def test_pre_capture_local():
+
+    x = 0
+
+    @pre(lambda x: x == 0, capture={"x"})
+    def test():
+        pass
+
+    test()
+
+
+def test_pre_clone_local():
+
+    x = [0]
+
+    @pre(lambda x: x.pop() == 0, clone={"x"})
+    def test():
+        pass
+
+    assert x == [0]
+
+    test()
+
+
+def test_pre_capture_global():
+
+    @pre(lambda THE_ANSWER: THE_ANSWER[0] == 42, capture={"THE_ANSWER"})
+    def test():
+        pass
+
+    test()
+
+
+def test_pre_clone_global():
+
+    @pre(lambda THE_ANSWER: THE_ANSWER.pop() == 42, clone={"THE_ANSWER"})
+    def test():
+        pass
+
+    test()
+
+    assert THE_ANSWER == [42]
+
+
 def test_post_predicate_false():
 
+    @pre(lambda: True)
     @post(lambda: False)
     def test():
         pass
@@ -224,6 +225,47 @@ def test_post_predicate_with_result_argument():
         test(50, 49)
 
 
+def test_post_predicate_with_capture():
+
+    @post(lambda result, x, y: result == x + y, capture_before={"x", "y"})
+    def test(x, y):
+        return abs(x + y)
+
+    assert test(1, 11) == 12
+    assert test(20, 30) == 50
+
+    @post(lambda x, y, result: result == x + y, capture_before={"x", "y"})
+    def test(x, y):
+        return abs(x + y)
+
+    assert test(1, 11) == 12
+    assert test(20, 30) == 50
+
+    with pytest.raises(ContractViolationException):
+        test(-2, 1)
+
+    with pytest.raises(TypeError):
+
+        @post(lambda result, z, y: True, capture_before={"z", "y"})
+        def test(x, y):
+            return abs(x + y)
+
+    @post(lambda x: not x.append(0), capture_before={"x"})
+    def test(x):
+        return len(x) == 0
+
+    assert test([])
+
+    @post(
+        lambda args, result, kwargs: result == len(args) + len(kwargs),
+        capture_before={"args", "kwargs"},
+    )
+    def test(*args, **kwargs):
+        return len(args) + len(kwargs)
+
+    assert test(1, 2, 3) == 3
+
+
 def test_post_exception():
 
     @post(lambda: __raise(ValueError("Ahhhh")))
@@ -236,8 +278,111 @@ def test_post_exception():
 
 def test_post_predicate_invalid():
 
-    with pytest.raises(ContractViolationException):
+    with pytest.raises(TypeError):
 
         @post(lambda x, y: True)
         def test():
             pass
+
+
+def test_post_capture_before_local():
+
+    x = 0
+
+    @post(lambda x: x == 0, capture_before={"x"})
+    def test():
+        pass
+
+    test()
+
+
+def test_post_clone_before_local():
+
+    x = [0]
+
+    @post(lambda x: x.pop() == 0, clone_before={"x"})
+    def test():
+        pass
+
+    test()
+
+    assert x == [0]
+
+
+def test_post_capture_before_global():
+
+    @post(lambda THE_ANSWER: THE_ANSWER[0] == 42, capture_before={"THE_ANSWER"})
+    def test():
+        pass
+
+    test()
+
+
+def test_post_clone_before_global():
+
+    @post(lambda THE_ANSWER: THE_ANSWER.pop() == 42, clone_before={"THE_ANSWER"})
+    def test():
+        pass
+
+    test()
+
+    assert THE_ANSWER == [42]
+
+
+def test_post_capture_after_local():
+
+    x = 42
+
+    @post(lambda x: x == 0, capture_after={"x"})
+    def test():
+        nonlocal x
+        x = 0
+
+    test()
+
+
+def test_post_clone_after_local():
+
+    x = [42]
+
+    @post(lambda x: x.pop() == 1, clone_after={"x"})
+    def test():
+        nonlocal x
+        x[0] = 1
+
+    test()
+
+    assert x == [1]
+
+
+def test_post_capture_after_global():
+
+    @post(lambda THE_ANSWER: THE_ANSWER[0] == 42, capture_after={"THE_ANSWER"})
+    def test():
+        pass
+
+    test()
+
+
+def test_post_clone_after_global():
+
+    @post(lambda THE_ANSWER: THE_ANSWER.pop() == 42, clone_after={"THE_ANSWER"})
+    def test():
+        pass
+
+    test()
+
+    assert THE_ANSWER == [42]
+
+
+def test_pre_post_capture_with_other_decorator():
+
+    x = ["foo"]
+
+    @deprecated("foobar")
+    @pre(lambda x: len(x) == 1, capture={"x"})
+    @post(lambda result, x, y: len(result) == len(x) + 1, capture_before={"x", "y"})
+    def test(y: int):
+        return x + [y]
+
+    test(42)

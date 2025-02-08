@@ -1,7 +1,9 @@
+import copy
 import inspect
 import sys
 from functools import wraps
 from inspect import Parameter
+from typing import Any
 
 from pycontractz.evaluation_semantic import EvaluationSemantic
 from pycontractz.assertion_kind import AssertionKind
@@ -11,38 +13,36 @@ from pycontractz.contract_violation_handler import (
     invoke_contract_violation_handler,
 )
 from pycontractz.detection_mode import DetectionMode
+from pycontractz.utils.map_function_arguments import map_function_arguments
 
 
-def __promote_positional_arguments_to_keyword_arguments(
-    args: tuple,
-    kwargs: dict,
-    signature: inspect.Signature,
-) -> tuple[tuple, dict]:
-    """Promotes positional arguments passed to a function to keyword arguments where possible
+def __find_outer_stack_frame(func) -> inspect.FrameInfo | None:
+    """Finds the calling stack frame"""
+    unwrapped = inspect.unwrap(func)
+    for frame in inspect.stack():
+        if frame.frame.f_code.co_filename is unwrapped.__code__.co_filename:
+            return frame
+    return None
 
-    Given a function with signature `signature`, positional arguments from *args are promoted to **kwargs if a matching
-    named parameter exists in the function signature. After this process, only parameters matching *args in the
-    signature (if any) remain positional.
-    """
 
-    matched_args = []
-    matched_kwargs = {}
+def __resolve_binding(candidates: list[dict[str, Any]], name: str) -> Any:
+    """Resolves a single binding and returns it. In case of error, raises ValueError."""
+    for scope in candidates:
+        if name in scope:
+            return scope[name]
+    raise ValueError(f'Invalid binding "{name}"')
 
-    params = list(signature.parameters.items())
 
-    for i in range(min(len(params), len(args))):
-        name = params[i][0]
-        param = params[i][1]
-        match param.kind:
-            case Parameter.VAR_POSITIONAL:
-                matched_args.extend(args[i:])
-                break  # Everything after must be keyword arguments
-            case _:
-                matched_kwargs[name] = args[i]
+def __resolve_bindings(
+    candidates: list[dict[str, Any]],
+    capture: set[str],
+    clone: set[str],
+) -> dict[str, Any]:
+    """Resolves all captures and clones and returns them. In case of error, raises ValueError."""
 
-    matched_kwargs.update(kwargs)
-
-    return tuple(matched_args), matched_kwargs
+    referenced = {n: __resolve_binding(candidates, n) for n in capture}
+    cloned = {n: copy.deepcopy(__resolve_binding(candidates, n)) for n in clone}
+    return referenced | cloned
 
 
 def __call_predicate(
@@ -112,8 +112,7 @@ def __assert_contract(
     kind: AssertionKind,
     loc: inspect.Traceback,
     predicate,
-    predicate_args: tuple,
-    predicate_kwargs: dict,
+    predicate_kwargs: dict[str, Any],
 ):
     """Evaluates the given predicate and handles a contract violation if the result was false or an exception escaped
 
@@ -122,11 +121,7 @@ def __assert_contract(
     """
 
     try:
-        pred_result = __call_predicate(
-            predicate,
-            predicate_args,
-            predicate_kwargs,
-        )
+        pred_result = predicate(**predicate_kwargs)
     except Exception as exc:
         __handle_contract_violation(
             semantic=semantic,
@@ -145,37 +140,59 @@ def __assert_contract(
             )
 
 
-def __check_predicate_well_formed(pred_params, func_params) -> str | None:
-    """Checks if a predicate is well-formed for the function it's decorating
+def __assert_predicate_well_formed(
+    pred_params,
+    bindings: set[str],
+    variables_in_scope: set[str],
+):
+    """Checks if a precondition predicate is well-formed given a set of bindings, and if those bindings are actually in scope
 
-    Returns an error description if the predicate is found to be ill-formed. Otherwise, returns None.
+    Raises a TypeError if the predicate is found to be ill-formed.
     """
 
     # Check that:
-    # - the predicate doesn't have positional-only parameters
-    # - if the predicate has a *args parameter, the decorated function also has one
-    # - all keyword arguments also exist in the decorated function
+    # - the predicate only has POSITIONAL_OR_KEYWORD parameters
+    # - all keyword arguments must be in the set of bindings
     for name, param in pred_params.items():
         match param.kind:
-            case Parameter.POSITIONAL_ONLY:
-                return f'Predicate has positional-only parameter "{name}"'
-            case Parameter.VAR_POSITIONAL:
-                if not any(
-                    p.kind == Parameter.VAR_POSITIONAL for p in func_params.values()
-                ):
-                    return f'Predicate has variadic positional-only parameter "{name}", but decorated function doesn\'t'
-            case Parameter.POSITIONAL_OR_KEYWORD | Parameter.KEYWORD_ONLY:
-                if not any(
-                    p.kind not in [Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD]
-                    and n == name
-                    for n, p in func_params.items()
-                ):
-                    return f'Predicate has parameter "{name}" not present in decorated function'
-    return None
+            case Parameter.POSITIONAL_OR_KEYWORD:
+                if not name in bindings:
+                    raise TypeError(f'Predicate parameter "{name}" not bound')
+                if not name in variables_in_scope:
+                    raise TypeError(f'Predicate parameter "{name}" not in scope')
+            case _:
+                raise TypeError(
+                    f'Predicate parameter "{name}" is of invalid kind {param.kind}'
+                )
 
 
-def pre(predicate):
-    """Precondition assertion decorator taking a predicate to evaluate on function evaluation"""
+def pre(
+    predicate,
+    capture: set[str] = None,
+    clone: set[str] = None,
+):
+    """Precondition assertion decorator factory taking a predicate to evaluate on function evaluation
+
+    Keyword arguments:
+        predicate: A callable evaluating the predicate to check before function evaluation
+        capture: A set of names to capture. Variables by this name can be predicate parameters
+        clone: A set of names to clone. Variables by this name can be predicate parameters
+
+    Note that the wrapped function's arguments are implicitly captured.
+
+    Returns:
+        - The returned decorator raises TypeError if the predicate is malformed.
+        - Otherwise:
+
+          - if the current contract evaluation semantic is not `ignore`, returns a wrapper of the decorated function that
+            checks the predicate before evaluating the original function.
+          - if the current contract evaluation semantic is `ignore`, returns the decorated function unmodified.
+    """
+
+    if capture is None:
+        capture = set()
+    if clone is None:
+        clone = set()
 
     pred_sig = inspect.signature(predicate)
     pred_params = pred_sig.parameters
@@ -186,35 +203,41 @@ def pre(predicate):
         func_sig = inspect.signature(func)
         func_params = func_sig.parameters
 
-        error_msg = __check_predicate_well_formed(pred_params, func_params)
-        if error_msg is not None:
-            __handle_contract_violation(
-                semantic=semantic,
-                mode=DetectionMode.implicit,
-                kind=AssertionKind.pre,
-                location=loc,
-                comment=error_msg,
-            )
-            return func
+        frame = __find_outer_stack_frame(func)
+        variables_in_scope = (
+            set(func_sig.parameters.keys())
+            | set(frame.frame.f_locals.keys())
+            | set(frame.frame.f_globals)
+        )
+
+        bindings = set(func_params.keys()) | capture | clone
+        __assert_predicate_well_formed(pred_params, bindings, variables_in_scope)
 
         if semantic == EvaluationSemantic.ignore:
             return func
 
         @wraps(func)
         def checked_func(*args, **kwargs):
-            nargs, nkwargs = __promote_positional_arguments_to_keyword_arguments(
-                args, kwargs, func_sig
+            nkwargs = map_function_arguments(func_sig, args, kwargs)
+
+            # resolve bindings
+            candidate_bindings = [nkwargs, frame.frame.f_locals, frame.frame.f_globals]
+            resolved_kwargs = __resolve_bindings(
+                candidates=candidate_bindings,
+                capture=capture | pred_params.keys(),
+                clone=clone,
             )
 
+            # assert precondition
             __assert_contract(
                 semantic=semantic,
                 kind=AssertionKind.pre,
                 loc=loc,
                 predicate=predicate,
-                predicate_args=nargs,
-                predicate_kwargs=nkwargs,
+                predicate_kwargs=resolved_kwargs,
             )
 
+            # evaluate decorated function
             return func(*args, **kwargs)
 
         return checked_func
@@ -222,8 +245,59 @@ def pre(predicate):
     return make_contract_checked_func
 
 
-def post(predicate):
-    """Postcondition assertion decorator taking a predicate to evaluate after function evaluation"""
+def __find_result_param(pred_params, bindings: set[str]) -> str | None:
+    """Given the predicate parameters `pred_params`, finds the one not in the set of bound names `bindings`.
+
+    Returns `None` if there is no result parameter.
+
+    Raises `TypeError` if there is more than one potential result parameter.
+    """
+
+    candidates = {n for n in pred_params.keys() if n not in bindings}
+    match len(candidates):
+        case 0:
+            return None
+        case 1:
+            return candidates.pop()
+        case _:
+            raise TypeError(
+                f"Unable to determine predicate result parameter. Candidates: {','.join(candidates)}"
+            )
+
+
+def post(
+    predicate,
+    capture_before: set[str] = None,
+    capture_after: set[str] = None,
+    clone_before: set[str] = None,
+    clone_after: set[str] = None,
+):
+    """Postcondition assertion decorator factory taking a predicate to evaluate after function evaluation
+
+    Keyword arguments:
+        predicate: A callable evaluating the predicate to check after function evaluation
+        capture_before: A set of names to capture before function evaluation. Variables by this name can be predicate parameters
+        capture_after: A set of names to capture after function evaluation. Variables by this name can be predicate parameters
+        clone_before: A set of names to clone before function evaluation. Variables by this name can be predicate parameters
+        clone_after: A set of names to clone after function evaluation. Variables by this name can be predicate parameters
+
+    Returns:
+        - The returned decorator raises TypeError if the predicate is malformed.
+        - Otherwise:
+
+          - if the current contract evaluation semantic is not `ignore`, returns a wrapper of the decorated function that
+            checks the predicate before evaluating the original function.
+          - if the current contract evaluation semantic is `ignore`, returns the decorated function unmodified.
+    """
+
+    if capture_before is None:
+        capture_before = set()
+    if capture_after is None:
+        capture_after = set()
+    if clone_before is None:
+        clone_before = set()
+    if clone_after is None:
+        clone_after = set()
 
     pred_sig = inspect.signature(predicate)
     pred_params = pred_sig.parameters
@@ -231,31 +305,60 @@ def post(predicate):
     semantic: EvaluationSemantic = get_contract_evaluation_semantic(AssertionKind.pre)
 
     def make_contract_checked_func(func):
-        if len(pred_params) > 1:
-            __handle_contract_violation(
-                semantic=semantic,
-                mode=DetectionMode.implicit,
-                kind=AssertionKind.pre,
-                location=loc,
-                comment="Postconditions must either have no or one parameter",
-            )
-            return func
+        func_sig = inspect.signature(func)
+        frame = __find_outer_stack_frame(func)
+
+        variables_in_scope = (
+            set(func_sig.parameters.keys())
+            | set(frame.frame.f_locals.keys())
+            | set(frame.frame.f_globals)
+        )
+
+        bindings = capture_before | capture_after | clone_before | clone_after
+
+        result_param_name = __find_result_param(pred_params, bindings)
+        if result_param_name is not None:
+            bindings.add(result_param_name)
+            variables_in_scope.add(result_param_name)
+
+        __assert_predicate_well_formed(pred_params, bindings, variables_in_scope)
 
         if semantic == EvaluationSemantic.ignore:
             return func
 
         @wraps(func)
         def checked_func(*args, **kwargs):
+            nkwargs = map_function_arguments(func_sig, args, kwargs)
+
+            # resolve "before"-type bindings
+            candidate_bindings = [nkwargs, frame.frame.f_locals, frame.frame.f_globals]
+            resolved_kwargs = __resolve_bindings(
+                candidates=candidate_bindings,
+                capture=capture_before,
+                clone=clone_before,
+            )
+
+            # evaluate decorated function
             result = func(*args, **kwargs)
 
-            assertion_kwargs = {name: result for name in pred_params.keys()}
+            # resolve "after"-type bindings
+            referenced_bindings = capture_after
+            if result_param_name is not None:
+                candidate_bindings = [{result_param_name: result}] + candidate_bindings
+                referenced_bindings.add(result_param_name)
+            resolved_kwargs |= __resolve_bindings(
+                candidates=candidate_bindings,
+                capture=referenced_bindings,
+                clone=clone_after,
+            )
+
+            # assert postcondition
             __assert_contract(
                 semantic=semantic,
                 kind=AssertionKind.post,
                 loc=loc,
                 predicate=predicate,
-                predicate_args=(),
-                predicate_kwargs=assertion_kwargs,
+                predicate_kwargs=resolved_kwargs,
             )
 
             return result
