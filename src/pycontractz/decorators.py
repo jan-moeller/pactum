@@ -1,7 +1,5 @@
 import inspect
-from collections.abc import Callable
 from functools import wraps
-from inspect import Parameter
 from typing import Any
 
 from pycontractz.evaluation_semantic import EvaluationSemantic
@@ -14,42 +12,7 @@ from pycontractz.contract_violation_handler import (
 from pycontractz.utils.find_outer_stack_frame import find_outer_stack_frame
 from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
-
-
-type Predicate = Callable[..., bool]
-
-
-def __call_predicate(
-    predicate: Predicate,
-    args: tuple,
-    kwargs: dict,
-) -> bool:
-    """Calls the given predicate given some arguments and returns whether the result was truthy
-
-    `args` and `kwargs` are assumed to be the output of `__promote_positional_arguments_to_keyword_arguments`.
-    """
-
-    reduced_kwargs = {}
-
-    sig = inspect.signature(predicate)
-    has_variadic_positional = False
-    has_variadic_keyword = False
-    for name, param in sig.parameters.items():
-        match param.kind:
-            case Parameter.VAR_POSITIONAL:
-                has_variadic_positional = True
-            case Parameter.VAR_KEYWORD:
-                has_variadic_keyword = True
-            case _:
-                reduced_kwargs[name] = kwargs[name]
-
-    if has_variadic_positional and has_variadic_keyword:
-        return bool(predicate(*args, **kwargs))
-    elif has_variadic_positional:
-        return bool(predicate(*args, **reduced_kwargs))
-    elif has_variadic_keyword:
-        return bool(predicate(**kwargs))
-    return bool(predicate(**reduced_kwargs))
+from pycontractz.predicate import Predicate, assert_predicate_well_formed
 
 
 def __handle_contract_violation(
@@ -90,32 +53,6 @@ def __assert_contract(
             kind=kind,
             location=loc,
         )
-
-
-def __assert_predicate_well_formed(
-    pred_params,
-    bindings: set[str],
-    variables_in_scope: set[str],
-):
-    """Checks if a precondition predicate is well-formed given a set of bindings, and if those bindings are actually in scope
-
-    Raises a TypeError if the predicate is found to be ill-formed.
-    """
-
-    # Check that:
-    # - the predicate only has POSITIONAL_OR_KEYWORD parameters
-    # - all keyword arguments must be in the set of bindings
-    for name, param in pred_params.items():
-        match param.kind:
-            case Parameter.POSITIONAL_OR_KEYWORD:
-                if not name in bindings:
-                    raise TypeError(f'Predicate parameter "{name}" not bound')
-                if not name in variables_in_scope:
-                    raise TypeError(f'Predicate parameter "{name}" not in scope')
-            case _:
-                raise TypeError(
-                    f'Predicate parameter "{name}" is of invalid kind {param.kind}'
-                )
 
 
 def pre(
@@ -163,7 +100,7 @@ def pre(
         )
 
         bindings = set(func_params.keys()) | capture | clone
-        __assert_predicate_well_formed(pred_params, bindings, variables_in_scope)
+        assert_predicate_well_formed(pred_params, bindings, variables_in_scope)
 
         if semantic == EvaluationSemantic.ignore:
             return func
@@ -273,7 +210,7 @@ def post(
             bindings.add(result_param_name)
             variables_in_scope.add(result_param_name)
 
-        __assert_predicate_well_formed(pred_params, bindings, variables_in_scope)
+        assert_predicate_well_formed(pred_params, bindings, variables_in_scope)
 
         if semantic == EvaluationSemantic.ignore:
             return func

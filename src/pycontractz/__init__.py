@@ -12,4 +12,5 @@ from .contract_violation_handler import (
 from .decorators import pre, post
 from .default_contract_violation_handler import default_contract_violation_handler
 from .evaluation_semantic import EvaluationSemantic
+from .predicate import Predicate
 from .raising_contract_violation_handler import raising_contract_violation_handler
