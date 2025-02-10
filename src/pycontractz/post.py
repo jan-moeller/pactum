@@ -68,7 +68,7 @@ def post(
     pred_sig = inspect.signature(predicate)
     pred_params = pred_sig.parameters
     loc = inspect.getframeinfo(inspect.currentframe().f_back)
-    semantic: EvaluationSemantic = get_contract_evaluation_semantic(AssertionKind.pre)
+    semantic: EvaluationSemantic = get_contract_evaluation_semantic(AssertionKind.post)
 
     def make_contract_checked_func(func):
         func_sig = inspect.signature(func)
