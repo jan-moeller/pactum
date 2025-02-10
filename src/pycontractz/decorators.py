@@ -1,4 +1,5 @@
 import inspect
+from collections.abc import Callable
 from functools import wraps
 from inspect import Parameter
 from typing import Any
@@ -15,8 +16,11 @@ from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
 
 
+type Predicate = Callable[..., bool]
+
+
 def __call_predicate(
-    predicate,
+    predicate: Predicate,
     args: tuple,
     kwargs: dict,
 ) -> bool:
@@ -74,7 +78,7 @@ def __assert_contract(
     semantic: EvaluationSemantic,
     kind: AssertionKind,
     loc: inspect.Traceback,
-    predicate,
+    predicate: Predicate,
     predicate_kwargs: dict[str, Any],
 ):
     """Evaluates the given predicate and handles a contract violation if the result was false"""
@@ -115,7 +119,7 @@ def __assert_predicate_well_formed(
 
 
 def pre(
-    predicate,
+    predicate: Predicate,
     capture: set[str] = None,
     clone: set[str] = None,
 ):
@@ -214,7 +218,7 @@ def __find_result_param(pred_params, bindings: set[str]) -> str | None:
 
 
 def post(
-    predicate,
+    predicate: Predicate,
     capture_before: set[str] = None,
     capture_after: set[str] = None,
     clone_before: set[str] = None,
