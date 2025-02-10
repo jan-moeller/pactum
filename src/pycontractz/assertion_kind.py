@@ -6,4 +6,3 @@ class AssertionKind(Enum):
 
     pre = 1  # Precondition
     post = 2  # Postcondition
-    assertion = 3  # Assertion

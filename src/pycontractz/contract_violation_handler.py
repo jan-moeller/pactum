@@ -32,7 +32,6 @@ def set_contract_evaluation_semantics(
     default: EvaluationSemantic | dict[AssertionKind, EvaluationSemantic] | None = None,
     pre: EvaluationSemantic | None = None,
     post: EvaluationSemantic | None = None,
-    assertion: EvaluationSemantic | None = None,
 ):
     """Changes the current contract evaluation semantics per kind"""
     global __assertion_semantics
@@ -45,12 +44,9 @@ def set_contract_evaluation_semantics(
         pre = default[AssertionKind.pre]
     if post is None:
         post = default[AssertionKind.post]
-    if assertion is None:
-        assertion = default[AssertionKind.assertion]
 
     __assertion_semantics[AssertionKind.pre] = pre
     __assertion_semantics[AssertionKind.post] = post
-    __assertion_semantics[AssertionKind.assertion] = assertion
 
 
 def get_contract_evaluation_semantic(
