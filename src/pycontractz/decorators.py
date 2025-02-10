@@ -1,4 +1,3 @@
-import copy
 import inspect
 from functools import wraps
 from inspect import Parameter
@@ -13,26 +12,7 @@ from pycontractz.contract_violation_handler import (
 )
 from pycontractz.utils.find_outer_stack_frame import find_outer_stack_frame
 from pycontractz.utils.map_function_arguments import map_function_arguments
-
-
-def __resolve_binding(candidates: list[dict[str, Any]], name: str) -> Any:
-    """Resolves a single binding and returns it. In case of error, raises ValueError."""
-    for scope in candidates:
-        if name in scope:
-            return scope[name]
-    raise ValueError(f'Invalid binding "{name}"')
-
-
-def __resolve_bindings(
-    candidates: list[dict[str, Any]],
-    capture: set[str],
-    clone: set[str],
-) -> dict[str, Any]:
-    """Resolves all captures and clones and returns them. In case of error, raises ValueError."""
-
-    referenced = {n: __resolve_binding(candidates, n) for n in capture}
-    cloned = {n: copy.deepcopy(__resolve_binding(candidates, n)) for n in clone}
-    return referenced | cloned
+from pycontractz.utils.resolve_bindings import resolve_bindings
 
 
 def __call_predicate(
@@ -190,7 +170,7 @@ def pre(
 
             # resolve bindings
             candidate_bindings = [nkwargs, frame.frame.f_locals, frame.frame.f_globals]
-            resolved_kwargs = __resolve_bindings(
+            resolved_kwargs = resolve_bindings(
                 candidates=candidate_bindings,
                 capture=capture | pred_params.keys(),
                 clone=clone,
@@ -300,7 +280,7 @@ def post(
 
             # resolve "before"-type bindings
             candidate_bindings = [nkwargs, frame.frame.f_locals, frame.frame.f_globals]
-            resolved_kwargs = __resolve_bindings(
+            resolved_kwargs = resolve_bindings(
                 candidates=candidate_bindings,
                 capture=capture_before,
                 clone=clone_before,
@@ -314,7 +294,7 @@ def post(
             if result_param_name is not None:
                 candidate_bindings = [{result_param_name: result}] + candidate_bindings
                 referenced_bindings.add(result_param_name)
-            resolved_kwargs |= __resolve_bindings(
+            resolved_kwargs |= resolve_bindings(
                 candidates=candidate_bindings,
                 capture=referenced_bindings,
                 clone=clone_after,
