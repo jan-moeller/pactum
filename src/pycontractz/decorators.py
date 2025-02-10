@@ -11,16 +11,8 @@ from pycontractz.contract_violation_handler import (
     get_contract_evaluation_semantic,
     invoke_contract_violation_handler,
 )
+from pycontractz.utils.find_outer_stack_frame import find_outer_stack_frame
 from pycontractz.utils.map_function_arguments import map_function_arguments
-
-
-def __find_outer_stack_frame(func) -> inspect.FrameInfo | None:
-    """Finds the calling stack frame"""
-    unwrapped = inspect.unwrap(func)
-    for frame in inspect.stack():
-        if frame.frame.f_code.co_filename is unwrapped.__code__.co_filename:
-            return frame
-    return None
 
 
 def __resolve_binding(candidates: list[dict[str, Any]], name: str) -> Any:
@@ -179,7 +171,7 @@ def pre(
         func_sig = inspect.signature(func)
         func_params = func_sig.parameters
 
-        frame = __find_outer_stack_frame(func)
+        frame = find_outer_stack_frame(func)
         variables_in_scope = (
             set(func_sig.parameters.keys())
             | set(frame.frame.f_locals.keys())
@@ -282,7 +274,7 @@ def post(
 
     def make_contract_checked_func(func):
         func_sig = inspect.signature(func)
-        frame = __find_outer_stack_frame(func)
+        frame = find_outer_stack_frame(func)
 
         variables_in_scope = (
             set(func_sig.parameters.keys())
