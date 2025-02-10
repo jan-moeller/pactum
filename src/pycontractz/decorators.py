@@ -1,58 +1,14 @@
 import inspect
 from functools import wraps
-from typing import Any
 
 from pycontractz.evaluation_semantic import EvaluationSemantic
 from pycontractz.assertion_kind import AssertionKind
-from pycontractz.contract_violation import ContractViolation
-from pycontractz.contract_violation_handler import (
-    get_contract_evaluation_semantic,
-    invoke_contract_violation_handler,
-)
+from pycontractz.contract_violation_handler import get_contract_evaluation_semantic
+from pycontractz.utils.assert_contract import assert_contract
 from pycontractz.utils.find_outer_stack_frame import find_outer_stack_frame
 from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
 from pycontractz.predicate import Predicate, assert_predicate_well_formed
-
-
-def __handle_contract_violation(
-    semantic: EvaluationSemantic,
-    kind: AssertionKind,
-    location: inspect.Traceback,
-    comment: str = "",
-):
-    """Handles a contract violation by invoking the contract violation handler and/or terminating if required"""
-
-    if semantic == EvaluationSemantic.ignore:
-        return
-
-    violation = ContractViolation(
-        comment=comment,
-        kind=kind,
-        location=location,
-        semantic=semantic,
-    )
-
-    if semantic == EvaluationSemantic.check:
-        invoke_contract_violation_handler(violation)
-
-
-def __assert_contract(
-    semantic: EvaluationSemantic,
-    kind: AssertionKind,
-    loc: inspect.Traceback,
-    predicate: Predicate,
-    predicate_kwargs: dict[str, Any],
-):
-    """Evaluates the given predicate and handles a contract violation if the result was false"""
-
-    pred_result = predicate(**predicate_kwargs)
-    if not pred_result:
-        __handle_contract_violation(
-            semantic=semantic,
-            kind=kind,
-            location=loc,
-        )
 
 
 def pre(
@@ -118,7 +74,7 @@ def pre(
             )
 
             # assert precondition
-            __assert_contract(
+            assert_contract(
                 semantic=semantic,
                 kind=AssertionKind.pre,
                 loc=loc,
@@ -242,7 +198,7 @@ def post(
             )
 
             # assert postcondition
-            __assert_contract(
+            assert_contract(
                 semantic=semantic,
                 kind=AssertionKind.post,
                 loc=loc,
