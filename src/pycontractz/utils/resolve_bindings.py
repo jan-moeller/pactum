@@ -12,11 +12,13 @@ def __resolve_binding(candidates: list[dict[str, Any]], name: str) -> Any:
 
 def resolve_bindings(
     candidates: list[dict[str, Any]],
-    capture: set[str],
-    clone: set[str],
+    capture: dict[str, str],
+    clone: dict[str, str],
 ) -> dict[str, Any]:
     """Resolves all captures and clones and returns them. In case of error, raises ValueError."""
 
-    referenced = {n: __resolve_binding(candidates, n) for n in capture}
-    cloned = {n: copy.deepcopy(__resolve_binding(candidates, n)) for n in clone}
+    referenced = {k: __resolve_binding(candidates, v) for k, v in capture.items()}
+    cloned = {
+        k: copy.deepcopy(__resolve_binding(candidates, v)) for k, v in clone.items()
+    }
     return referenced | cloned

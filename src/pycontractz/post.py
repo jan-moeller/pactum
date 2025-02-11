@@ -9,6 +9,7 @@ from pycontractz.utils.assert_contract import assert_contract
 from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
 from pycontractz.predicate import Predicate, assert_predicate_well_formed
+from pycontractz.capture_set import CaptureSet, normalize_capture_set
 
 
 class post:
@@ -35,10 +36,10 @@ class post:
     def __init__(
         self,
         predicate: Predicate,
-        capture_before: set[str] = None,
-        capture_after: set[str] = None,
-        clone_before: set[str] = None,
-        clone_after: set[str] = None,
+        capture_before: CaptureSet = None,
+        capture_after: CaptureSet = None,
+        clone_before: CaptureSet = None,
+        clone_after: CaptureSet = None,
     ):
         """Initializes the precondition assertion factory
 
@@ -50,14 +51,10 @@ class post:
             clone_after: A set of names to clone after function evaluation. Variables by this name can be predicate parameters
         """
 
-        if capture_before is None:
-            capture_before = set()
-        if capture_after is None:
-            capture_after = set()
-        if clone_before is None:
-            clone_before = set()
-        if clone_after is None:
-            clone_after = set()
+        capture_before = normalize_capture_set(capture_before)
+        capture_after = normalize_capture_set(capture_after)
+        clone_before = normalize_capture_set(clone_before)
+        clone_after = normalize_capture_set(clone_after)
 
         self.predicate = predicate
         self.capture_before = capture_before
@@ -71,7 +68,7 @@ class post:
             AssertionKind.post
         )
         self.bindings = capture_before | capture_after | clone_before | clone_after
-        self.result_param_name = self.__find_result_param(self.bindings)
+        self.result_param_name = self.__find_result_param(set(self.bindings.keys()))
 
     def __find_result_param(self, bindings: set[str]) -> str | None:
         """Given the predicate parameters `pred_params`, finds the one not in the set of bound names `bindings`.
@@ -114,7 +111,7 @@ class post:
         )
 
         if self.result_param_name is not None:
-            self.bindings.add(self.result_param_name)
+            self.bindings[self.result_param_name] = self.result_param_name
             variables_in_scope.add(self.result_param_name)
 
         assert_predicate_well_formed(
@@ -149,7 +146,7 @@ class post:
                 candidate_bindings = [
                     {self.result_param_name: result}
                 ] + candidate_bindings
-                referenced_bindings.add(self.result_param_name)
+                referenced_bindings[self.result_param_name] = self.result_param_name
             resolved_kwargs |= resolve_bindings(
                 candidates=candidate_bindings,
                 capture=referenced_bindings,

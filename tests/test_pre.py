@@ -191,6 +191,17 @@ def test_pre_clone_global():
     assert THE_ANSWER == [42]
 
 
+def test_pre_capture_rename():
+
+    x = 0
+
+    @pre(lambda y: y == 0, capture={"y": "x"})
+    def test():
+        pass
+
+    test()
+
+
 def test_pre_post_capture_with_other_decorator():
 
     x = ["foo"]
@@ -202,6 +213,15 @@ def test_pre_post_capture_with_other_decorator():
         return x + [y]
 
     test(42)
+
+
+def test_pre_capture_wrong_type():
+
+    with pytest.raises(TypeError):
+
+        @pre(lambda x: x == 0, capture=["x"])
+        def test():
+            pass
 
 
 def test_pre_as_context_manager():

@@ -9,6 +9,7 @@ from pycontractz.utils.assert_contract import assert_contract
 from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
 from pycontractz.predicate import Predicate, assert_predicate_well_formed
+from pycontractz.capture_set import CaptureSet, normalize_capture_set
 
 
 class pre:
@@ -17,8 +18,8 @@ class pre:
     def __init__(
         self,
         predicate: Predicate,
-        capture: set[str] = None,
-        clone: set[str] = None,
+        capture: CaptureSet = None,
+        clone: CaptureSet = None,
     ):
         """Initializes the precondition assertion factory
 
@@ -28,10 +29,8 @@ class pre:
                      Note that the wrapped function's arguments are implicitly captured.
             clone: A set of names to clone. Variables by this name can be predicate parameters.
         """
-        if capture is None:
-            capture = set()
-        if clone is None:
-            clone = set()
+        capture = normalize_capture_set(capture)
+        clone = normalize_capture_set(clone)
 
         self.predicate = predicate
         self.capture = capture
@@ -65,7 +64,7 @@ class pre:
             | set(self.parent_frame.f_globals)
         )
 
-        bindings = set(func_params.keys()) | self.capture | self.clone
+        bindings = {n: n for n in func_params.keys()} | self.capture | self.clone
         assert_predicate_well_formed(self.pred_params, bindings, variables_in_scope)
 
         if self.semantic == EvaluationSemantic.ignore:
@@ -83,7 +82,7 @@ class pre:
             ]
             resolved_kwargs = resolve_bindings(
                 candidates=candidate_bindings,
-                capture=self.capture | self.pred_params.keys(),
+                capture={n: n for n in self.pred_params.keys()} | self.capture,
                 clone=self.clone,
             )
 
@@ -112,7 +111,7 @@ class pre:
         candidate_bindings = [self.parent_frame.f_locals, self.parent_frame.f_globals]
         resolved_kwargs = resolve_bindings(
             candidates=candidate_bindings,
-            capture=self.capture | self.pred_params.keys(),
+            capture={n: n for n in self.pred_params.keys()} | self.capture,
             clone=self.clone,
         )
 

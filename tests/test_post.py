@@ -202,6 +202,22 @@ def test_post_clone_after_global():
 
     assert THE_ANSWER == [42]
 
+def test_post_capture_rename():
+
+    x = 0
+
+    @post(lambda y: y == 0, capture_before={"y": "x"})
+    def test():
+        pass
+
+    test()
+
+def test_post_capture_wrong_type():
+
+    with pytest.raises(TypeError):
+        @post(lambda x: x == 0, capture_before=["x"])
+        def test():
+            pass
 
 def test_post_as_context_manager():
     x = [42]

@@ -1,5 +1,6 @@
 from inspect import Parameter
 from collections.abc import Callable
+from pycontractz.capture_set import CaptureSet
 
 type Predicate = Callable[..., bool]
 """A contract predicate is a bool-returning callable"""
@@ -7,7 +8,7 @@ type Predicate = Callable[..., bool]
 
 def assert_predicate_well_formed(
     pred_params,
-    bindings: set[str],
+    bindings: CaptureSet,
     variables_in_scope: set[str],
 ):
     """Checks if a precondition predicate is well-formed given a set of bindings, and if those bindings are actually in scope
@@ -23,7 +24,7 @@ def assert_predicate_well_formed(
             case Parameter.POSITIONAL_OR_KEYWORD:
                 if not name in bindings:
                     raise TypeError(f'Predicate parameter "{name}" not bound')
-                if not name in variables_in_scope:
+                if not bindings[name] in variables_in_scope:
                     raise TypeError(f'Predicate parameter "{name}" not in scope')
             case _:
                 raise TypeError(
