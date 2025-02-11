@@ -82,17 +82,17 @@ class contract_evaluation_semantics(ContextDecorator):
         default: EvaluationSemantic | None = None,
         pre: EvaluationSemantic | None = None,
         post: EvaluationSemantic | None = None,
-        assertion: EvaluationSemantic | None = None,
     ):
         self.default = default
         self.pre = pre
         self.post = post
-        self.assertion = assertion
 
     def __enter__(self):
         self.old_semantics = get_contract_evaluation_semantic()
         set_contract_evaluation_semantics(
-            default=self.default, pre=self.pre, post=self.post, assertion=self.assertion
+            default=self.default,
+            pre=self.pre,
+            post=self.post,
         )
         return self
 
