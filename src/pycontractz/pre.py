@@ -1,64 +1,74 @@
 import inspect
+from collections.abc import Callable
 from functools import wraps
 
 from pycontractz.evaluation_semantic import EvaluationSemantic
 from pycontractz.assertion_kind import AssertionKind
 from pycontractz.contract_violation_handler import get_contract_evaluation_semantic
 from pycontractz.utils.assert_contract import assert_contract
-from pycontractz.utils.find_outer_stack_frame import find_outer_stack_frame
 from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
 from pycontractz.predicate import Predicate, assert_predicate_well_formed
 
 
-def pre(
-    predicate: Predicate,
-    capture: set[str] = None,
-    clone: set[str] = None,
-):
-    """Precondition assertion decorator factory taking a predicate to evaluate on function evaluation
+class pre:
+    """Precondition assertion factory taking a predicate to evaluate on function evaluation"""
 
-    Keyword arguments:
-        predicate: A callable evaluating the predicate to check before function evaluation
-        capture: A set of names to capture. Variables by this name can be predicate parameters
-        clone: A set of names to clone. Variables by this name can be predicate parameters
+    def __init__(
+        self,
+        predicate: Predicate,
+        capture: set[str] = None,
+        clone: set[str] = None,
+    ):
+        """Initializes the precondition assertion factory
 
-    Note that the wrapped function's arguments are implicitly captured.
+        Keyword arguments:
+            predicate: A callable evaluating the predicate to check before function evaluation.
+            capture: A set of names to capture. Variables by this name can be predicate parameters.
+                     Note that the wrapped function's arguments are implicitly captured.
+            clone: A set of names to clone. Variables by this name can be predicate parameters.
+        """
+        if capture is None:
+            capture = set()
+        if clone is None:
+            clone = set()
 
-    Returns:
-        - The returned decorator raises TypeError if the predicate is malformed.
-        - Otherwise:
+        self.predicate = predicate
+        self.capture = capture
+        self.clone = clone
+        self.pred_sig = inspect.signature(predicate)
+        self.pred_params = self.pred_sig.parameters
+        self.parent_frame = inspect.currentframe().f_back
+        self.semantic: EvaluationSemantic = get_contract_evaluation_semantic(
+            AssertionKind.pre
+        )
 
-          - if the current contract evaluation semantic is not `ignore`, returns a wrapper of the decorated function that
-            checks the predicate before evaluating the original function.
-          - if the current contract evaluation semantic is `ignore`, returns the decorated function unmodified.
-    """
+    def __call__(self, func: Callable):
+        """Wraps the given callable in another callable that checks preconditions before executing the original callable
 
-    if capture is None:
-        capture = set()
-    if clone is None:
-        clone = set()
+        Keyword arguments:
+            func: Callable to wrap. Typically, a function.
 
-    pred_sig = inspect.signature(predicate)
-    pred_params = pred_sig.parameters
-    loc = inspect.getframeinfo(inspect.currentframe().f_back)
-    semantic: EvaluationSemantic = get_contract_evaluation_semantic(AssertionKind.pre)
+        Returns:
+            - `func` if the current contract evaluation semantic is `ignore`
+            - a checked wrapper compatible with `func` otherwise
 
-    def make_contract_checked_func(func):
+        Raises:
+            TypeError: if the predicate is malformed given `func` and the set of captured and cloned values.
+        """
         func_sig = inspect.signature(func)
         func_params = func_sig.parameters
 
-        frame = find_outer_stack_frame(func)
         variables_in_scope = (
             set(func_sig.parameters.keys())
-            | set(frame.frame.f_locals.keys())
-            | set(frame.frame.f_globals)
+            | set(self.parent_frame.f_locals.keys())
+            | set(self.parent_frame.f_globals)
         )
 
-        bindings = set(func_params.keys()) | capture | clone
-        assert_predicate_well_formed(pred_params, bindings, variables_in_scope)
+        bindings = set(func_params.keys()) | self.capture | self.clone
+        assert_predicate_well_formed(self.pred_params, bindings, variables_in_scope)
 
-        if semantic == EvaluationSemantic.ignore:
+        if self.semantic == EvaluationSemantic.ignore:
             return func
 
         @wraps(func)
@@ -66,19 +76,23 @@ def pre(
             nkwargs = map_function_arguments(func_sig, args, kwargs)
 
             # resolve bindings
-            candidate_bindings = [nkwargs, frame.frame.f_locals, frame.frame.f_globals]
+            candidate_bindings = [
+                nkwargs,
+                self.parent_frame.f_locals,
+                self.parent_frame.f_globals,
+            ]
             resolved_kwargs = resolve_bindings(
                 candidates=candidate_bindings,
-                capture=capture | pred_params.keys(),
-                clone=clone,
+                capture=self.capture | self.pred_params.keys(),
+                clone=self.clone,
             )
 
             # assert precondition
             assert_contract(
-                semantic=semantic,
+                semantic=self.semantic,
                 kind=AssertionKind.pre,
-                loc=loc,
-                predicate=predicate,
+                loc=inspect.getframeinfo(self.parent_frame),
+                predicate=self.predicate,
                 predicate_kwargs=resolved_kwargs,
             )
 
@@ -87,4 +101,31 @@ def pre(
 
         return checked_func
 
-    return make_contract_checked_func
+    def __enter__(self):
+        """Checks all preconditions when the scope is entered
+
+        Raises:
+            TypeError: if the predicate is malformed given the set of captured and cloned values.
+        """
+
+        # resolve bindings
+        candidate_bindings = [self.parent_frame.f_locals, self.parent_frame.f_globals]
+        resolved_kwargs = resolve_bindings(
+            candidates=candidate_bindings,
+            capture=self.capture | self.pred_params.keys(),
+            clone=self.clone,
+        )
+
+        # assert precondition
+        assert_contract(
+            semantic=self.semantic,
+            kind=AssertionKind.pre,
+            loc=inspect.getframeinfo(self.parent_frame),
+            predicate=self.predicate,
+            predicate_kwargs=resolved_kwargs,
+        )
+        return self
+
+    def __exit__(self, *exc):
+        """Doesn't do anything"""
+        return False

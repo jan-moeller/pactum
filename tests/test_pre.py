@@ -202,3 +202,20 @@ def test_pre_post_capture_with_other_decorator():
         return x + [y]
 
     test(42)
+
+
+def test_pre_as_context_manager():
+    x = [42]
+    with pre(lambda x: x.pop() == 42, clone={"x"}):
+        pass
+    assert x == [42]
+
+
+def test_pre_post_as_context_manager():
+    x = [42]
+    with (
+        pre(lambda x: x.pop() == 42, clone={"x"}),
+        post(lambda x: len(x) == 0, capture_after={"x"}),
+    ):
+        x.pop()
+    assert x == []

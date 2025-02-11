@@ -201,3 +201,13 @@ def test_post_clone_after_global():
     test()
 
     assert THE_ANSWER == [42]
+
+
+def test_post_as_context_manager():
+    x = [42]
+    with (
+        post(lambda x: x.pop() == 42, clone_before={"x"}),
+        post(lambda x: x.pop() == 3, clone_after={"x"}),
+    ):
+        x[0] = 3
+    assert x == [3]
