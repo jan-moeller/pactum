@@ -58,19 +58,19 @@ class post:
         clone_before = normalize_capture_set(clone_before)
         clone_after = normalize_capture_set(clone_after)
 
-        self.predicate = predicate
-        self.capture_before = capture_before
-        self.capture_after = capture_after
-        self.clone_before = clone_before
-        self.clone_after = clone_after
-        self.pred_sig = inspect.signature(predicate)
-        self.pred_params = self.pred_sig.parameters
-        self.parent_frame = inspect.currentframe().f_back
-        self.semantic: EvaluationSemantic = get_contract_evaluation_semantic(
+        self.__predicate = predicate
+        self.__capture_before = capture_before
+        self.__capture_after = capture_after
+        self.__clone_before = clone_before
+        self.__clone_after = clone_after
+        self.__pred_sig = inspect.signature(predicate)
+        self.__pred_params = self.__pred_sig.parameters
+        self.__parent_frame = inspect.currentframe().f_back
+        self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(
             AssertionKind.post
         )
-        self.bindings = capture_before | capture_after | clone_before | clone_after
-        self.result_param_name = self.__find_result_param(set(self.bindings.keys()))
+        self.__bindings = capture_before | capture_after | clone_before | clone_after
+        self.__result_param_name = self.__find_result_param(set(self.__bindings.keys()))
 
     def __find_result_param(self, bindings: set[str]) -> str | None:
         """Given the predicate parameters `pred_params`, finds the one not in the set of bound names `bindings`.
@@ -80,7 +80,7 @@ class post:
         Raises `TypeError` if there is more than one potential result parameter.
         """
 
-        candidates = {n for n in self.pred_params.keys() if n not in bindings}
+        candidates = {n for n in self.__pred_params.keys() if n not in bindings}
         match len(candidates):
             case 0:
                 return None
@@ -108,19 +108,19 @@ class post:
 
         variables_in_scope = (
             set(func_sig.parameters.keys())
-            | set(self.parent_frame.f_locals.keys())
-            | set(self.parent_frame.f_globals)
+            | set(self.__parent_frame.f_locals.keys())
+            | set(self.__parent_frame.f_globals)
         )
 
-        if self.result_param_name is not None:
-            self.bindings[self.result_param_name] = self.result_param_name
-            variables_in_scope.add(self.result_param_name)
+        if self.__result_param_name is not None:
+            self.__bindings[self.__result_param_name] = self.__result_param_name
+            variables_in_scope.add(self.__result_param_name)
 
         assert_predicate_well_formed(
-            self.pred_params, self.bindings, variables_in_scope
+            self.__pred_params, self.__bindings, variables_in_scope
         )
 
-        if self.semantic == EvaluationSemantic.ignore:
+        if self.__semantic == EvaluationSemantic.ignore:
             return func
 
         @wraps(func)
@@ -130,37 +130,37 @@ class post:
             # resolve "before"-type bindings
             candidate_bindings = [
                 nkwargs,
-                self.parent_frame.f_locals,
-                self.parent_frame.f_globals,
+                self.__parent_frame.f_locals,
+                self.__parent_frame.f_globals,
             ]
             resolved_kwargs = resolve_bindings(
                 candidates=candidate_bindings,
-                capture=self.capture_before,
-                clone=self.clone_before,
+                capture=self.__capture_before,
+                clone=self.__clone_before,
             )
 
             # evaluate decorated function
             result = func(*args, **kwargs)
 
             # resolve "after"-type bindings
-            referenced_bindings = self.capture_after
-            if self.result_param_name is not None:
+            referenced_bindings = self.__capture_after
+            if self.__result_param_name is not None:
                 candidate_bindings = [
-                    {self.result_param_name: result}
+                    {self.__result_param_name: result}
                 ] + candidate_bindings
-                referenced_bindings[self.result_param_name] = self.result_param_name
+                referenced_bindings[self.__result_param_name] = self.__result_param_name
             resolved_kwargs |= resolve_bindings(
                 candidates=candidate_bindings,
                 capture=referenced_bindings,
-                clone=self.clone_after,
+                clone=self.__clone_after,
             )
 
             # assert postcondition
             assert_contract(
-                semantic=self.semantic,
+                semantic=self.__semantic,
                 kind=AssertionKind.post,
-                loc=inspect.getframeinfo(self.parent_frame),
-                predicate=self.predicate,
+                loc=inspect.getframeinfo(self.__parent_frame),
+                predicate=self.__predicate,
                 predicate_kwargs=resolved_kwargs,
             )
 
@@ -175,20 +175,20 @@ class post:
             TypeError: if the predicate is malformed given the set of captured and cloned values.
         """
 
-        if self.result_param_name is not None:
+        if self.__result_param_name is not None:
             raise TypeError(
-                f'Postcondition refers to result "{self.result_param_name}", but usage as context manager precludes result parameter usage'
+                f'Postcondition refers to result "{self.__result_param_name}", but usage as context manager precludes result parameter usage'
             )
 
         # resolve "before"-type bindings
-        self.candidate_bindings = [
-            self.parent_frame.f_locals,
-            self.parent_frame.f_globals,
+        self.__candidate_bindings = [
+            self.__parent_frame.f_locals,
+            self.__parent_frame.f_globals,
         ]
-        self.resolved_kwargs = resolve_bindings(
-            candidates=self.candidate_bindings,
-            capture=self.capture_before,
-            clone=self.clone_before,
+        self.__resolved_kwargs = resolve_bindings(
+            candidates=self.__candidate_bindings,
+            capture=self.__capture_before,
+            clone=self.__clone_before,
         )
         return self
 
@@ -200,19 +200,19 @@ class post:
         """
 
         # resolve "after"-type bindings
-        referenced_bindings = self.capture_after
-        self.resolved_kwargs |= resolve_bindings(
-            candidates=self.candidate_bindings,
+        referenced_bindings = self.__capture_after
+        self.__resolved_kwargs |= resolve_bindings(
+            candidates=self.__candidate_bindings,
             capture=referenced_bindings,
-            clone=self.clone_after,
+            clone=self.__clone_after,
         )
 
         # assert postcondition
         assert_contract(
-            semantic=self.semantic,
+            semantic=self.__semantic,
             kind=AssertionKind.post,
-            loc=inspect.getframeinfo(self.parent_frame),
-            predicate=self.predicate,
-            predicate_kwargs=self.resolved_kwargs,
+            loc=inspect.getframeinfo(self.__parent_frame),
+            predicate=self.__predicate,
+            predicate_kwargs=self.__resolved_kwargs,
         )
         return False

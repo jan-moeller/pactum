@@ -34,13 +34,13 @@ class pre:
         capture = normalize_capture_set(capture)
         clone = normalize_capture_set(clone)
 
-        self.predicate = predicate
-        self.capture = capture
-        self.clone = clone
-        self.pred_sig = inspect.signature(predicate)
-        self.pred_params = self.pred_sig.parameters
-        self.parent_frame = inspect.currentframe().f_back
-        self.semantic: EvaluationSemantic = get_contract_evaluation_semantic(
+        self.__predicate = predicate
+        self.__capture = capture
+        self.__clone = clone
+        self.__pred_sig = inspect.signature(predicate)
+        self.__pred_params = self.__pred_sig.parameters
+        self.__parent_frame = inspect.currentframe().f_back
+        self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(
             AssertionKind.pre
         )
 
@@ -62,14 +62,14 @@ class pre:
 
         variables_in_scope = (
             set(func_sig.parameters.keys())
-            | set(self.parent_frame.f_locals.keys())
-            | set(self.parent_frame.f_globals)
+            | set(self.__parent_frame.f_locals.keys())
+            | set(self.__parent_frame.f_globals)
         )
 
-        bindings = {n: n for n in func_params.keys()} | self.capture | self.clone
-        assert_predicate_well_formed(self.pred_params, bindings, variables_in_scope)
+        bindings = {n: n for n in func_params.keys()} | self.__capture | self.__clone
+        assert_predicate_well_formed(self.__pred_params, bindings, variables_in_scope)
 
-        if self.semantic == EvaluationSemantic.ignore:
+        if self.__semantic == EvaluationSemantic.ignore:
             return func
 
         @wraps(func)
@@ -79,21 +79,21 @@ class pre:
             # resolve bindings
             candidate_bindings = [
                 nkwargs,
-                self.parent_frame.f_locals,
-                self.parent_frame.f_globals,
+                self.__parent_frame.f_locals,
+                self.__parent_frame.f_globals,
             ]
             resolved_kwargs = resolve_bindings(
                 candidates=candidate_bindings,
-                capture={n: n for n in self.pred_params.keys()} | self.capture,
-                clone=self.clone,
+                capture={n: n for n in self.__pred_params.keys()} | self.__capture,
+                clone=self.__clone,
             )
 
             # assert precondition
             assert_contract(
-                semantic=self.semantic,
+                semantic=self.__semantic,
                 kind=AssertionKind.pre,
-                loc=inspect.getframeinfo(self.parent_frame),
-                predicate=self.predicate,
+                loc=inspect.getframeinfo(self.__parent_frame),
+                predicate=self.__predicate,
                 predicate_kwargs=resolved_kwargs,
             )
 
@@ -110,19 +110,22 @@ class pre:
         """
 
         # resolve bindings
-        candidate_bindings = [self.parent_frame.f_locals, self.parent_frame.f_globals]
+        candidate_bindings = [
+            self.__parent_frame.f_locals,
+            self.__parent_frame.f_globals,
+        ]
         resolved_kwargs = resolve_bindings(
             candidates=candidate_bindings,
-            capture={n: n for n in self.pred_params.keys()} | self.capture,
-            clone=self.clone,
+            capture={n: n for n in self.__pred_params.keys()} | self.__capture,
+            clone=self.__clone,
         )
 
         # assert precondition
         assert_contract(
-            semantic=self.semantic,
+            semantic=self.__semantic,
             kind=AssertionKind.pre,
-            loc=inspect.getframeinfo(self.parent_frame),
-            predicate=self.predicate,
+            loc=inspect.getframeinfo(self.__parent_frame),
+            predicate=self.__predicate,
             predicate_kwargs=resolved_kwargs,
         )
         return self
