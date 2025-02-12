@@ -18,6 +18,8 @@ class pre:
     def __init__(
         self,
         predicate: Predicate,
+        /,
+        *,
         capture: CaptureSet = None,
         clone: CaptureSet = None,
     ):
@@ -42,7 +44,7 @@ class pre:
             AssertionKind.pre
         )
 
-    def __call__(self, func: Callable):
+    def __call__(self, func: Callable, /):
         """Wraps the given callable in another callable that checks preconditions before executing the original callable
 
         Keyword arguments:

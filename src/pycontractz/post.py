@@ -36,6 +36,8 @@ class post:
     def __init__(
         self,
         predicate: Predicate,
+        /,
+        *,
         capture_before: CaptureSet = None,
         capture_after: CaptureSet = None,
         clone_before: CaptureSet = None,
@@ -89,7 +91,7 @@ class post:
                     f"Unable to determine predicate result parameter. Candidates: {','.join(candidates)}"
                 )
 
-    def __call__(self, func: Callable):
+    def __call__(self, func: Callable, /):
         """Wraps the given callable in another callable that checks postconditions after executing the original callable
 
         Keyword arguments:
