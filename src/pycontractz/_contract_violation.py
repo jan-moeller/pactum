@@ -1,7 +1,7 @@
 import inspect
 
-from pycontractz.assertion_kind import AssertionKind
-from pycontractz.evaluation_semantic import EvaluationSemantic
+from pycontractz._assertion_kind import AssertionKind
+from pycontractz._evaluation_semantic import EvaluationSemantic
 
 
 class ContractViolation:

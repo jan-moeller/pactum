@@ -1,8 +1,8 @@
 import re
 
-from pycontractz.evaluation_semantic import EvaluationSemantic
-from pycontractz.assertion_kind import AssertionKind
-from pycontractz.contract_assertion_label import ContractAssertionInfo
+from pycontractz._evaluation_semantic import EvaluationSemantic
+from pycontractz._assertion_kind import AssertionKind
+from pycontractz._contract_assertion_label import ContractAssertionInfo
 
 
 def ignore(

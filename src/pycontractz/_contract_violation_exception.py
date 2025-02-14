@@ -1,4 +1,4 @@
-from pycontractz.contract_violation import ContractViolation
+from pycontractz._contract_violation import ContractViolation
 
 
 class ContractViolationException(Exception):

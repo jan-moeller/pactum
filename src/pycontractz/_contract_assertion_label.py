@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from pycontractz.evaluation_semantic import EvaluationSemantic
-from pycontractz.assertion_kind import AssertionKind
+from pycontractz._evaluation_semantic import EvaluationSemantic
+from pycontractz._assertion_kind import AssertionKind
 
 
 @dataclass

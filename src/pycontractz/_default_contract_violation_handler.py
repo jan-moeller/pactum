@@ -1,6 +1,6 @@
 import sys
 
-from pycontractz.contract_violation import ContractViolation
+from pycontractz._contract_violation import ContractViolation
 
 
 def default_contract_violation_handler(violation: ContractViolation):

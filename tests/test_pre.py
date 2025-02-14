@@ -11,8 +11,8 @@ from pycontractz import (
     set_contract_evaluation_semantic,
     set_contract_violation_handler,
     labels,
+    global_contract_assertion_label
 )
-from pycontractz.contract_violation_handler import global_contract_assertion_label
 
 set_contract_evaluation_semantic(EvaluationSemantic.check)
 set_contract_violation_handler(raising_contract_violation_handler)

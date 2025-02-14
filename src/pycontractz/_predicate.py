@@ -1,6 +1,6 @@
 from inspect import Parameter
 from collections.abc import Callable
-from pycontractz.capture_set import CaptureSet
+from pycontractz._capture_set import CaptureSet
 
 type Predicate = Callable[..., bool]
 """A contract predicate is a bool-returning callable"""

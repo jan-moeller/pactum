@@ -2,7 +2,7 @@ import inspect
 
 import pytest
 
-from pycontractz.utils.map_function_arguments import map_function_arguments
+from pycontractz._utils._map_function_arguments import map_function_arguments
 
 
 @pytest.mark.unit
