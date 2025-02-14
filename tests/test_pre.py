@@ -6,16 +6,9 @@ from pycontractz import (
     ContractViolationException,
     pre,
     post,
-    EvaluationSemantic,
-    raising_contract_violation_handler,
-    set_contract_evaluation_semantic,
-    set_contract_violation_handler,
     labels,
-    global_contract_assertion_label
+    global_contract_assertion_label,
 )
-
-set_contract_evaluation_semantic(EvaluationSemantic.check)
-set_contract_violation_handler(raising_contract_violation_handler)
 
 THE_ANSWER = [42]
 

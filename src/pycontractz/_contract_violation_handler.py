@@ -7,11 +7,9 @@ from pycontractz._contract_assertion_label import (
     ContractAssertionLabel,
     ContractAssertionInfo,
 )
-from pycontractz._default_contract_violation_handler import (
-    default_contract_violation_handler,
-)
+from pycontractz.handlers import raise_on_contract_violation
 
-__contract_violation_handler = default_contract_violation_handler
+__contract_violation_handler = raise_on_contract_violation
 __global_evaluation_semantic = EvaluationSemantic.check
 __global_contract_assertion_label: ContractAssertionLabel = lambda sem, info: sem
 
