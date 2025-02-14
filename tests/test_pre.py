@@ -8,11 +8,13 @@ from pycontractz import (
     post,
     EvaluationSemantic,
     raising_contract_violation_handler,
-    set_contract_evaluation_semantics,
+    set_contract_evaluation_semantic,
     set_contract_violation_handler,
+    labels,
 )
+from pycontractz.contract_violation_handler import global_contract_assertion_label
 
-set_contract_evaluation_semantics(EvaluationSemantic.check)
+set_contract_evaluation_semantic(EvaluationSemantic.check)
 set_contract_violation_handler(raising_contract_violation_handler)
 
 THE_ANSWER = [42]
@@ -239,3 +241,52 @@ def test_pre_post_as_context_manager():
     ):
         x.pop()
     assert x == []
+
+
+def test_pre_with_label():
+
+    @pre(lambda: False, labels=[labels.ignore])
+    def test():
+        pass
+
+    test()
+
+    with pytest.raises(ContractViolationException):
+
+        @pre(lambda: False, labels=[labels.ignore_postconditions])
+        def test():
+            pass
+
+        test()
+
+    @pre(lambda: False, labels=[labels.expensive])
+    def test():
+        pass
+
+    test()
+
+    with pytest.raises(ContractViolationException), labels.enable_expensive():
+
+        @pre(lambda: False, labels=[labels.expensive])
+        def test():
+            pass
+
+        test()
+
+    with global_contract_assertion_label(labels.filter_by_module(r"foo")):
+
+        @pre(lambda: False)
+        def test():
+            pass
+
+        test()
+
+    with global_contract_assertion_label(labels.filter_by_module(r"pre")):
+
+        with pytest.raises(ContractViolationException):
+
+            @pre(lambda: False)
+            def test():
+                pass
+
+            test()

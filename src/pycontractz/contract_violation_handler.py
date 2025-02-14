@@ -1,15 +1,19 @@
 from collections.abc import Callable
 from contextlib import ContextDecorator
 
-from pycontractz.assertion_kind import AssertionKind
 from pycontractz.contract_violation import ContractViolation
 from pycontractz.evaluation_semantic import EvaluationSemantic
+from pycontractz.contract_assertion_label import (
+    ContractAssertionLabel,
+    ContractAssertionInfo,
+)
 from pycontractz.default_contract_violation_handler import (
     default_contract_violation_handler,
 )
 
 __contract_violation_handler = default_contract_violation_handler
-__assertion_semantics = {k: EvaluationSemantic.check for k in AssertionKind}
+__global_evaluation_semantic = EvaluationSemantic.check
+__global_contract_assertion_label: ContractAssertionLabel = lambda sem, info: sem
 
 
 def invoke_contract_violation_handler(violation: ContractViolation):
@@ -28,34 +32,31 @@ def get_contract_violation_handler() -> Callable[[ContractViolation], None]:
     return __contract_violation_handler
 
 
-def set_contract_evaluation_semantics(
-    default: EvaluationSemantic | dict[AssertionKind, EvaluationSemantic] | None = None,
-    pre: EvaluationSemantic | None = None,
-    post: EvaluationSemantic | None = None,
-):
-    """Changes the current contract evaluation semantics per kind"""
-    global __assertion_semantics
-
-    if default is None:
-        default = __assertion_semantics
-    if isinstance(default, EvaluationSemantic):
-        default = {k: default for k in AssertionKind}
-    if pre is None:
-        pre = default[AssertionKind.pre]
-    if post is None:
-        post = default[AssertionKind.post]
-
-    __assertion_semantics[AssertionKind.pre] = pre
-    __assertion_semantics[AssertionKind.post] = post
+def set_contract_evaluation_semantic(semantic: EvaluationSemantic):
+    """Changes the current contract evaluation semantic"""
+    global __global_evaluation_semantic
+    __global_evaluation_semantic = semantic
 
 
 def get_contract_evaluation_semantic(
-    kind: AssertionKind | None = None,
-) -> EvaluationSemantic | dict[AssertionKind, EvaluationSemantic]:
-    """Retrieves the currently configured contract evaluation semantics per kind"""
-    if kind is None:
-        return __assertion_semantics
-    return __assertion_semantics[kind]
+    info: ContractAssertionInfo | None = None,
+) -> EvaluationSemantic:
+    """Retrieves the currently configured contract evaluation semantic"""
+
+    if info is None:
+        return __global_evaluation_semantic
+    return __global_contract_assertion_label(__global_evaluation_semantic, info)
+
+
+def set_global_contract_assertion_label(label: ContractAssertionLabel):
+    """Changes the current global label, influencing the evaluation semantics"""
+    global __global_contract_assertion_label
+    __global_contract_assertion_label = label
+
+
+def get_global_contract_assertion_label() -> ContractAssertionLabel:
+    """Retrieves the current global label"""
+    return __global_contract_assertion_label
 
 
 class contract_violation_handler(ContextDecorator):
@@ -74,28 +75,39 @@ class contract_violation_handler(ContextDecorator):
         return False
 
 
-class contract_evaluation_semantics(ContextDecorator):
-    """Context manager to temporarily change the evaluation semantics. Usable as a decorator as well."""
+class contract_evaluation_semantic(ContextDecorator):
+    """Context manager to temporarily change the evaluation semantic. Usable as a decorator as well."""
 
     def __init__(
         self,
-        default: EvaluationSemantic | None = None,
-        pre: EvaluationSemantic | None = None,
-        post: EvaluationSemantic | None = None,
+        semantic: EvaluationSemantic,
     ):
-        self.default = default
-        self.pre = pre
-        self.post = post
+        self.semantic = semantic
 
     def __enter__(self):
-        self.old_semantics = get_contract_evaluation_semantic()
-        set_contract_evaluation_semantics(
-            default=self.default,
-            pre=self.pre,
-            post=self.post,
-        )
+        self.old_semantic = get_contract_evaluation_semantic()
+        set_contract_evaluation_semantic(self.semantic)
         return self
 
     def __exit__(self, *exc):
-        set_contract_evaluation_semantics(self.old_semantics)
+        set_contract_evaluation_semantic(self.old_semantic)
+        return False
+
+
+class global_contract_assertion_label(ContextDecorator):
+    """Context manager to temporarily change the global contract assertion label. Usable as a decorator as well."""
+
+    def __init__(
+        self,
+        label: ContractAssertionLabel,
+    ):
+        self.label = label
+
+    def __enter__(self):
+        self.old_label = get_global_contract_assertion_label()
+        set_global_contract_assertion_label(self.label)
+        return self
+
+    def __exit__(self, *exc):
+        set_global_contract_assertion_label(self.old_label)
         return False

@@ -10,6 +10,10 @@ from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
 from pycontractz.predicate import Predicate, assert_predicate_well_formed
 from pycontractz.capture_set import CaptureSet, normalize_capture_set
+from pycontractz.contract_assertion_label import (
+    ContractAssertionLabel,
+    ContractAssertionInfo,
+)
 
 
 class post:
@@ -42,6 +46,7 @@ class post:
         capture_after: CaptureSet = None,
         clone_before: CaptureSet = None,
         clone_after: CaptureSet = None,
+        labels: list[ContractAssertionLabel] = None,
     ):
         """Initializes the precondition assertion factory
 
@@ -51,12 +56,16 @@ class post:
             capture_after: A set of names to capture after function evaluation. Variables by this name can be predicate parameters
             clone_before: A set of names to clone before function evaluation. Variables by this name can be predicate parameters
             clone_after: A set of names to clone after function evaluation. Variables by this name can be predicate parameters
+            labels: A list of labels that determine this assertion's evaluation semantic
         """
 
         capture_before = normalize_capture_set(capture_before)
         capture_after = normalize_capture_set(capture_after)
         clone_before = normalize_capture_set(clone_before)
         clone_after = normalize_capture_set(clone_after)
+
+        if labels is None:
+            labels = []
 
         self.__predicate = predicate
         self.__capture_before = capture_before
@@ -66,9 +75,15 @@ class post:
         self.__pred_sig = inspect.signature(predicate)
         self.__pred_params = self.__pred_sig.parameters
         self.__parent_frame = inspect.currentframe().f_back
-        self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(
-            AssertionKind.post
+
+        info = ContractAssertionInfo(
+            kind=AssertionKind.post,
+            module_name=inspect.getmodule(self.__parent_frame).__name__,
         )
+        self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(info)
+        for label in labels:
+            self.__semantic = label(self.__semantic, info)
+
         self.__bindings = capture_before | capture_after | clone_before | clone_after
         self.__result_param_name = self.__find_result_param(set(self.__bindings.keys()))
 

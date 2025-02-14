@@ -10,6 +10,10 @@ from pycontractz.utils.map_function_arguments import map_function_arguments
 from pycontractz.utils.resolve_bindings import resolve_bindings
 from pycontractz.predicate import Predicate, assert_predicate_well_formed
 from pycontractz.capture_set import CaptureSet, normalize_capture_set
+from pycontractz.contract_assertion_label import (
+    ContractAssertionLabel,
+    ContractAssertionInfo,
+)
 
 
 class pre:
@@ -22,6 +26,7 @@ class pre:
         *,
         capture: CaptureSet = None,
         clone: CaptureSet = None,
+        labels: list[ContractAssertionLabel] = None,
     ):
         """Initializes the precondition assertion factory
 
@@ -30,9 +35,13 @@ class pre:
             capture: A set of names to capture. Variables by this name can be predicate parameters.
                      Note that the wrapped function's arguments are implicitly captured.
             clone: A set of names to clone. Variables by this name can be predicate parameters.
+            labels: A list of labels that determine this assertion's evaluation semantic
         """
         capture = normalize_capture_set(capture)
         clone = normalize_capture_set(clone)
+
+        if labels is None:
+            labels = []
 
         self.__predicate = predicate
         self.__capture = capture
@@ -40,9 +49,14 @@ class pre:
         self.__pred_sig = inspect.signature(predicate)
         self.__pred_params = self.__pred_sig.parameters
         self.__parent_frame = inspect.currentframe().f_back
-        self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(
-            AssertionKind.pre
+
+        info = ContractAssertionInfo(
+            kind=AssertionKind.pre,
+            module_name=inspect.getmodule(self.__parent_frame).__name__,
         )
+        self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(info)
+        for label in labels:
+            self.__semantic = label(self.__semantic, info)
 
     def __call__(self, func: Callable, /):
         """Wraps the given callable in another callable that checks preconditions before executing the original callable
