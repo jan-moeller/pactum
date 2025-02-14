@@ -107,12 +107,15 @@ def test_map_function_arguments():
     assert map_function_arguments(
         sig_1dp_1d_1vp_1k_1vk, tuple(), {"g": 2, "i": 3, "a": 4}
     ) == {
+        "f": 1,
         "g": 2,
         "h": tuple(),
         "i": 3,
         "j": {"a": 4},
     }
     assert map_function_arguments(sig_1dp_1d_1vp_1k_1vk, tuple(), {"i": 3, "a": 4}) == {
+        "f": 1,
+        "g": 2,
         "h": tuple(),
         "i": 3,
         "j": {"a": 4},
@@ -128,6 +131,7 @@ def test_map_function_arguments():
     }
     assert map_function_arguments(sig_1p_1d_1vp_1k_1vk, (1,), {"i": 3, "a": 4}) == {
         "f": 1,
+        "g": 2,
         "h": tuple(),
         "i": 3,
         "j": {"a": 4},
@@ -145,6 +149,7 @@ def test_map_function_arguments():
         "f": 1,
         "g": 2,
         "h": tuple(),
+        "i": 4,
         "j": {"a": 4},
     }
 
