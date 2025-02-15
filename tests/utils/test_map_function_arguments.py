@@ -5,7 +5,6 @@ import pytest
 from pycontractz._utils._map_function_arguments import map_function_arguments
 
 
-@pytest.mark.unit
 def test_map_function_arguments():
 
     sig_0 = inspect.Signature()
