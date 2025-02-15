@@ -8,8 +8,8 @@ from pycontractz._contract_assertion_label import (
 )
 from pycontractz.handlers import raise_on_contract_violation, ContractViolationHandler
 
-__contract_violation_handler = raise_on_contract_violation
-__global_evaluation_semantic = EvaluationSemantic.check
+__contract_violation_handler: ContractViolationHandler = raise_on_contract_violation
+__global_evaluation_semantic: EvaluationSemantic = EvaluationSemantic.check
 __global_contract_assertion_label: ContractAssertionLabel = lambda sem, info: sem
 
 
@@ -18,13 +18,13 @@ def invoke_contract_violation_handler(violation: ContractViolation):
     __contract_violation_handler(violation)
 
 
-def set_contract_violation_handler(handler: Callable[[ContractViolation], None]):
+def set_contract_violation_handler(handler: ContractViolationHandler):
     """Replaces the contract violation handler"""
     global __contract_violation_handler
     __contract_violation_handler = handler
 
 
-def get_contract_violation_handler() -> Callable[[ContractViolation], None]:
+def get_contract_violation_handler() -> ContractViolationHandler:
     """Retrieves the current contract violation handler"""
     return __contract_violation_handler
 
@@ -59,7 +59,7 @@ def get_global_contract_assertion_label() -> ContractAssertionLabel:
 class contract_violation_handler(ContextDecorator):
     """Context manager to temporarily change the contract violation handler. Usable as decorator as well."""
 
-    def __init__(self, handler: Callable[[ContractViolation], None]):
+    def __init__(self, handler: ContractViolationHandler):
         self.handler = handler
 
     def __enter__(self):
