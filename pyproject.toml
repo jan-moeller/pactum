@@ -8,6 +8,16 @@ dependencies = []
 [project.optional-dependencies]
 tests = ["pytest"]
 
+[build-system]
+requires = ["setuptools>=61.2", "wheel"]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["docs*", "tests*"]
+
 [tool.black]
 target-version = ["py313"]
 
