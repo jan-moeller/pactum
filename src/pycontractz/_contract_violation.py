@@ -13,7 +13,7 @@ class ContractViolation:
         self,
         comment: str,
         kind: AssertionKind,
-        location: inspect.Traceback,
+        location: inspect.Traceback | None,
         semantic: EvaluationSemantic,
     ):
         self.comment = comment
@@ -21,12 +21,20 @@ class ContractViolation:
         self.location = location
         self.semantic = semantic
 
-    def __str__(self):
+    def __str__(self) -> str:
         kind = ContractViolation.__kind_strings[self.kind.value]
-        loc = f"{self.location.filename}:{self.location.lineno}"
+        loc = (
+            f"{self.location.filename}:{self.location.lineno}"
+            if self.location is not None
+            else ""
+        )
         diagnostic = f"{kind} violation at {loc}"
         if len(self.comment) > 0:
             diagnostic += f": {self.comment}"
-        if len(self.location.code_context) > 0:
+        if (
+            self.location is not None
+            and self.location.code_context is not None
+            and len(self.location.code_context) > 0
+        ):
             diagnostic += f"\nContext:\n{'\n'.join(self.location.code_context)}"
         return diagnostic
