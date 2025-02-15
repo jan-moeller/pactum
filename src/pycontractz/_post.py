@@ -74,11 +74,14 @@ class post:
         self.__clone_after = clone_after
         self.__pred_sig = inspect.signature(predicate)
         self.__pred_params = self.__pred_sig.parameters
-        self.__parent_frame = inspect.currentframe().f_back
+        self.__parent_frame = inspect.currentframe()
+        if self.__parent_frame is not None:
+            self.__parent_frame = self.__parent_frame.f_back
 
+        module = inspect.getmodule(self.__parent_frame)
         info = ContractAssertionInfo(
             kind=AssertionKind.post,
-            module_name=inspect.getmodule(self.__parent_frame).__name__,
+            module_name=module.__name__ if module is not None else "",
         )
         self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(info)
         for label in labels:
@@ -121,11 +124,10 @@ class post:
         """
         func_sig = inspect.signature(func)
 
-        variables_in_scope = (
-            set(func_sig.parameters.keys())
-            | set(self.__parent_frame.f_locals.keys())
-            | set(self.__parent_frame.f_globals)
-        )
+        variables_in_scope = set(func_sig.parameters.keys())
+        if self.__parent_frame is not None:
+            variables_in_scope |= set(self.__parent_frame.f_locals.keys())
+            variables_in_scope |= set(self.__parent_frame.f_globals.keys())
 
         if self.__result_param_name is not None:
             self.__bindings[self.__result_param_name] = self.__result_param_name

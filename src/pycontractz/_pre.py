@@ -48,11 +48,14 @@ class pre:
         self.__clone = clone
         self.__pred_sig = inspect.signature(predicate)
         self.__pred_params = self.__pred_sig.parameters
-        self.__parent_frame = inspect.currentframe().f_back
+        self.__parent_frame = inspect.currentframe()
+        if self.__parent_frame is not None:
+            self.__parent_frame = self.__parent_frame.f_back
 
+        module = inspect.getmodule(self.__parent_frame)
         info = ContractAssertionInfo(
             kind=AssertionKind.pre,
-            module_name=inspect.getmodule(self.__parent_frame).__name__,
+            module_name=module.__name__ if module is not None else "",
         )
         self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(info)
         for label in labels:
@@ -74,11 +77,10 @@ class pre:
         func_sig = inspect.signature(func)
         func_params = func_sig.parameters
 
-        variables_in_scope = (
-            set(func_sig.parameters.keys())
-            | set(self.__parent_frame.f_locals.keys())
-            | set(self.__parent_frame.f_globals)
-        )
+        variables_in_scope = set(func_sig.parameters.keys())
+        if self.__parent_frame is not None:
+            variables_in_scope |= set(self.__parent_frame.f_locals.keys())
+            variables_in_scope |= set(self.__parent_frame.f_globals.keys())
 
         bindings = {n: n for n in func_params.keys()} | self.__capture | self.__clone
         assert_predicate_well_formed(self.__pred_params, bindings, variables_in_scope)
