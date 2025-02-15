@@ -42,11 +42,11 @@ class post:
         predicate: Predicate,
         /,
         *,
-        capture_before: CaptureSet = None,
-        capture_after: CaptureSet = None,
-        clone_before: CaptureSet = None,
-        clone_after: CaptureSet = None,
-        labels: list[ContractAssertionLabel] = None,
+        capture_before: CaptureSet | None = None,
+        capture_after: CaptureSet | None = None,
+        clone_before: CaptureSet | None = None,
+        clone_after: CaptureSet | None = None,
+        labels: list[ContractAssertionLabel] | None = None,
     ):
         """Initializes the precondition assertion factory
 

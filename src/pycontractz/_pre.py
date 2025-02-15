@@ -24,9 +24,9 @@ class pre:
         predicate: Predicate,
         /,
         *,
-        capture: CaptureSet = None,
-        clone: CaptureSet = None,
-        labels: list[ContractAssertionLabel] = None,
+        capture: CaptureSet | None = None,
+        clone: CaptureSet | None = None,
+        labels: list[ContractAssertionLabel] | None = None,
     ):
         """Initializes the precondition assertion factory
 
