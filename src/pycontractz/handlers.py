@@ -37,3 +37,6 @@ def log_on_contract_violation(
                 log.error(str(violation))
 
             return handler
+
+        case _:
+            raise TypeError("Invalid logging target")
