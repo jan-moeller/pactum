@@ -1,6 +1,8 @@
 import inspect
 from collections.abc import Callable
 from functools import wraps
+from types import TracebackType
+from typing import Any, Self, Literal
 
 from pycontractz._evaluation_semantic import EvaluationSemantic
 from pycontractz._assertion_kind import AssertionKind
@@ -109,7 +111,7 @@ class post:
                     f"Unable to determine predicate result parameter. Candidates: {','.join(candidates)}"
                 )
 
-    def __call__(self, func: Callable, /):
+    def __call__[R](self, func: Callable[..., R], /) -> Callable[..., R]:
         """Wraps the given callable in another callable that checks postconditions after executing the original callable
 
         Keyword arguments:
@@ -141,15 +143,16 @@ class post:
             return func
 
         @wraps(func)
-        def checked_func(*args, **kwargs):
+        def checked_func(*args: Any, **kwargs: Any) -> R:
             nkwargs = map_function_arguments(func_sig, args, kwargs)
 
             # resolve "before"-type bindings
-            candidate_bindings = [
-                nkwargs,
-                self.__parent_frame.f_locals,
-                self.__parent_frame.f_globals,
-            ]
+            candidate_bindings = [nkwargs]
+            if self.__parent_frame is not None:
+                candidate_bindings += [
+                    self.__parent_frame.f_locals,
+                    self.__parent_frame.f_globals,
+                ]
             resolved_kwargs = resolve_bindings(
                 candidates=candidate_bindings,
                 capture=self.__capture_before,
@@ -176,7 +179,11 @@ class post:
             assert_contract(
                 semantic=self.__semantic,
                 kind=AssertionKind.post,
-                loc=inspect.getframeinfo(self.__parent_frame),
+                loc=(
+                    inspect.getframeinfo(self.__parent_frame)
+                    if self.__parent_frame is not None
+                    else None
+                ),
                 predicate=self.__predicate,
                 predicate_kwargs=resolved_kwargs,
             )
@@ -185,7 +192,7 @@ class post:
 
         return checked_func
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Captures any variables when the scope is entered
 
         Raises:
@@ -198,10 +205,12 @@ class post:
             )
 
         # resolve "before"-type bindings
-        self.__candidate_bindings = [
-            self.__parent_frame.f_locals,
-            self.__parent_frame.f_globals,
-        ]
+        self.__candidate_bindings = []
+        if self.__parent_frame is not None:
+            self.__candidate_bindings += [
+                self.__parent_frame.f_locals,
+                self.__parent_frame.f_globals,
+            ]
         self.__resolved_kwargs = resolve_bindings(
             candidates=self.__candidate_bindings,
             capture=self.__capture_before,
@@ -209,7 +218,12 @@ class post:
         )
         return self
 
-    def __exit__(self, *exc):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> Literal[False]:
         """Captures any variables, then checks all postconditions
 
         Raises:
@@ -228,7 +242,11 @@ class post:
         assert_contract(
             semantic=self.__semantic,
             kind=AssertionKind.post,
-            loc=inspect.getframeinfo(self.__parent_frame),
+            loc=(
+                inspect.getframeinfo(self.__parent_frame)
+                if self.__parent_frame is not None
+                else None
+            ),
             predicate=self.__predicate,
             predicate_kwargs=self.__resolved_kwargs,
         )
