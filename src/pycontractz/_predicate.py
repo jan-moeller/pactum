@@ -22,9 +22,9 @@ def assert_predicate_well_formed(
     for name, param in pred_params.items():
         match param.kind:
             case Parameter.POSITIONAL_OR_KEYWORD:
-                if not name in bindings:
+                if name not in bindings:
                     raise TypeError(f'Predicate parameter "{name}" not bound')
-                if not bindings[name] in variables_in_scope:
+                if bindings[name] not in variables_in_scope:
                     raise TypeError(f'Predicate parameter "{name}" not in scope')
             case _:
                 raise TypeError(
