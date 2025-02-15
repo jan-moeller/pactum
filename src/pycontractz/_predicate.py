@@ -1,14 +1,14 @@
 from inspect import Parameter
 from collections.abc import Callable
-from pycontractz._capture_set import CaptureSet
+from types import MappingProxyType
 
 type Predicate = Callable[..., bool]
 """A contract predicate is a bool-returning callable"""
 
 
 def assert_predicate_well_formed(
-    pred_params,
-    bindings: CaptureSet,
+    pred_params: MappingProxyType[str, Parameter],
+    bindings: dict[str, str],
     variables_in_scope: set[str],
 ):
     """Checks if a precondition predicate is well-formed given a set of bindings, and if those bindings are actually in scope
