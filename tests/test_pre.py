@@ -252,13 +252,15 @@ def test_pre_with_label():
 
         test()
 
-    @pre(lambda: False, labels=[labels.expensive])
-    def test():
-        pass
+    with labels.enable_expensive(False):
 
-    test()
+        @pre(lambda: False, labels=[labels.expensive])
+        def test():
+            pass
 
-    with pytest.raises(ContractViolationException), labels.enable_expensive():
+        test()
+
+    with pytest.raises(ContractViolationException), labels.enable_expensive(True):
 
         @pre(lambda: False, labels=[labels.expensive])
         def test():

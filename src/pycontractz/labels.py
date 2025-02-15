@@ -24,18 +24,29 @@ def ignore_postconditions(
     return semantic
 
 
+__expensive_assertions_enabled = True
+
+
 def expensive(
     semantic: EvaluationSemantic,
     info: ContractAssertionInfo,
 ) -> EvaluationSemantic:
     """A contract assertion label marking an assertion as expensive to check"""
 
-    if not expensive.enable:
+    if not __expensive_assertions_enabled:
         return EvaluationSemantic.ignore
     return semantic
 
 
-expensive.enable = False
+def set_expensive_assertions_enabled(enabled: bool):
+    """Allows to enable or disable expensive contract checks"""
+    global __expensive_assertions_enabled
+    __expensive_assertions_enabled = enabled
+
+
+def get_expensive_assertions_enabled() -> bool:
+    """Retrieves whether expensive contract checks are currently enabled"""
+    return __expensive_assertions_enabled
 
 
 class enable_expensive:
@@ -43,12 +54,12 @@ class enable_expensive:
         self.enable = enable
 
     def __enter__(self):
-        self.__old_enable = expensive.enable
-        expensive.enable = self.enable
+        self.__old_enable = get_expensive_assertions_enabled()
+        set_expensive_assertions_enabled(self.enable)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        expensive.enable = self.__old_enable
+        set_expensive_assertions_enabled(self.__old_enable)
         return False
 
 

@@ -242,13 +242,15 @@ def test_post_with_label():
 
     test()
 
-    @post(lambda: False, labels=[labels.expensive])
-    def test():
-        pass
+    with labels.enable_expensive(False):
 
-    test()
+        @post(lambda: False, labels=[labels.expensive])
+        def test():
+            pass
 
-    with pytest.raises(ContractViolationException), labels.enable_expensive():
+        test()
+
+    with pytest.raises(ContractViolationException), labels.enable_expensive(True):
 
         @post(lambda: False, labels=[labels.expensive])
         def test():
