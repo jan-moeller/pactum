@@ -5,9 +5,12 @@ name: Python package
 
 on:
   push:
-    branches: [ "main", "feature/*" ]
+    branches: [ "main", "feature/*", "bugfix/*" ]
   pull_request:
     branches: [ "main" ]
+
+env:
+  MAIN_BRANCH: refs/heads/main
 
 jobs:
   build:
@@ -19,6 +22,7 @@ jobs:
         python-version: [ "3.13" ]
 
     steps:
+      # Setup
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -27,8 +31,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install flake8 pytest mypy black
+          python -m pip install flake8 pytest mypy black toml-cli
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      # Validation
       - name: Lint with flake8
         run: flake8 . --count --select=E9,F63,F7,F82 --max-complexity=10 --show-source --extend-exclude=tests/ --statistics
       - name: Formatting check
@@ -37,3 +42,50 @@ jobs:
         run: mypy --strict src/
       - name: Test with pytest
         run: pytest
+      # Build a release distribution (part of validation, but also used later on)
+      - name: Build release
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Upload release distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+      # Check if this is the first commit of this version on master and create a tag, if yes
+      - name: Extract version
+        if: github.ref == env.MAIN_BRANCH
+        run: echo "TAG_NAME=v$(toml get --toml-path pyproject.toml project.version)" >> $GITHUB_ENV
+      - name: Check if this version has been tagged before
+        id: check_tag
+        if: github.ref == env.MAIN_BRANCH
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = process.env.TAG_NAME;
+            try {
+              await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tag}`
+              });
+              console.log(`Tag ${tag} exists.`);
+              core.setOutput("exists", "true");
+            } catch (error) {
+              if (error.status === 404) {
+                console.log(`Tag ${tag} does not exist.`);
+                core.setOutput("exists", "false");
+              } else {
+                throw error;
+              }
+            }
+      # Create GitHub Release
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false' && github.ref == env.MAIN_BRANCH
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{env.TAG_NAME}}
+          tag_name: ${{env.TAG_NAME}}
+          files: dist/*
+          generate_release_notes: true
