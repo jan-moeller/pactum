@@ -10,7 +10,7 @@ def assert_predicate_well_formed(
     pred_params: MappingProxyType[str, Parameter],
     bindings: dict[str, str],
     variables_in_scope: set[str],
-):
+) -> None:
     """Checks if a precondition predicate is well-formed given a set of bindings, and if those bindings are actually in scope
 
     Raises a TypeError if the predicate is found to be ill-formed.
