@@ -2,7 +2,7 @@ type CaptureSet = set[str] | dict[str, str]
 """A set of captured or cloned variables"""
 
 
-def normalize_capture_set(capture: CaptureSet) -> CaptureSet:
+def normalize_capture_set(capture: CaptureSet | None) -> dict[str, str]:
     """Makes sure the capture set is a dict"""
 
     match capture:
