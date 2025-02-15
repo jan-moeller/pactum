@@ -17,6 +17,7 @@ from ._contract_violation_handler import (
     global_contract_assertion_label,  # noqa: F401
 )
 from ._evaluation_semantic import EvaluationSemantic  # noqa: F401
+from .handlers import ContractViolationHandler  # noqa: F401
 from ._post import post  # noqa: F401
 from ._pre import pre  # noqa: F401
 from ._predicate import Predicate  # noqa: F401

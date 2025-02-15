@@ -1,11 +1,13 @@
 import sys
 import logging
+from collections.abc import Callable
 from io import TextIOWrapper
 from typing import TextIO
 
 from pycontractz._contract_violation import ContractViolation
 from pycontractz._contract_violation_exception import ContractViolationException
 
+type ContractViolationHandler = Callable[[ContractViolation], None]
 
 def raise_on_contract_violation(violation: ContractViolation):
     """A contract violation handler that raises a ContractViolationException"""

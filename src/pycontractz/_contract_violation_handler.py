@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from contextlib import ContextDecorator
 
 from pycontractz._contract_violation import ContractViolation
@@ -7,7 +6,7 @@ from pycontractz._contract_assertion_label import (
     ContractAssertionLabel,
     ContractAssertionInfo,
 )
-from pycontractz.handlers import raise_on_contract_violation
+from pycontractz.handlers import raise_on_contract_violation, ContractViolationHandler
 
 __contract_violation_handler = raise_on_contract_violation
 __global_evaluation_semantic = EvaluationSemantic.check
