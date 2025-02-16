@@ -4,15 +4,15 @@ from functools import wraps
 from types import TracebackType
 from typing import Any, Self, Literal
 
-from pycontractz._evaluation_semantic import EvaluationSemantic
-from pycontractz._assertion_kind import AssertionKind
-from pycontractz._contract_violation_handler import get_contract_evaluation_semantic
-from pycontractz._utils._assert_contract import assert_contract
-from pycontractz._utils._map_function_arguments import map_function_arguments
-from pycontractz._utils._resolve_bindings import resolve_bindings
-from pycontractz._predicate import Predicate, assert_predicate_well_formed
-from pycontractz._capture_set import CaptureSet, normalize_capture_set
-from pycontractz._contract_assertion_label import (
+from pactum._evaluation_semantic import EvaluationSemantic
+from pactum._assertion_kind import AssertionKind
+from pactum._contract_violation_handler import get_contract_evaluation_semantic
+from pactum._utils._assert_contract import assert_contract
+from pactum._utils._map_function_arguments import map_function_arguments
+from pactum._utils._resolve_bindings import resolve_bindings
+from pactum._predicate import Predicate, assert_predicate_well_formed
+from pactum._capture_set import CaptureSet, normalize_capture_set
+from pactum._contract_assertion_label import (
     ContractAssertionLabel,
     ContractAssertionInfo,
 )

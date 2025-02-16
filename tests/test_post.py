@@ -1,6 +1,6 @@
 import pytest
 
-from pycontractz import (
+from pactum import (
     ContractViolationException,
     pre,
     post,

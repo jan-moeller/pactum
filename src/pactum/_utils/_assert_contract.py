@@ -1,10 +1,10 @@
 import inspect
 from typing import Any
-from pycontractz._evaluation_semantic import EvaluationSemantic
-from pycontractz._assertion_kind import AssertionKind
-from pycontractz._contract_violation import ContractViolation
-from pycontractz._contract_violation_handler import invoke_contract_violation_handler
-from pycontractz._predicate import Predicate
+from pactum._evaluation_semantic import EvaluationSemantic
+from pactum._assertion_kind import AssertionKind
+from pactum._contract_violation import ContractViolation
+from pactum._contract_violation_handler import invoke_contract_violation_handler
+from pactum._predicate import Predicate
 
 
 def __handle_contract_violation(

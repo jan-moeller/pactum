@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from pycontractz import (
+from pactum import (
     ContractViolationException,
     contract_violation_handler,
     handlers,

@@ -1,6 +1,6 @@
 import inspect
 
-from pycontractz import (
+from pactum import (
     AssertionKind,
     ContractViolation,
     EvaluationSemantic,

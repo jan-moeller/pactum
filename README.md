@@ -1,4 +1,4 @@
-# pycontractz
+# Pactum
 
 Pycontractz allows annotating preconditions and postconditions on functions using decorators.
 This serves multiple purposes:
