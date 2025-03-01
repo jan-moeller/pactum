@@ -88,7 +88,14 @@ class post:
                     f"Unable to determine predicate result parameter. Candidates: {','.join(candidates)}"
                 )
 
-    def __call__[R](self, func: Callable[..., R], /) -> Callable[..., R]:
+    def __call__[R](
+        self,
+        func: Callable[..., R],
+        /,
+        *,
+        _implicit_return_capture: bool = True,
+        _implicit_arg_capture: bool = False,
+    ) -> Callable[..., R]:
         """Wraps the given callable in another callable that checks postconditions after executing the original callable
 
         Keyword arguments:
@@ -112,9 +119,12 @@ class post:
                 self.__parent_frame,
                 nkwargs,
             )
+            capture = self.__capture_before
+            if _implicit_arg_capture:
+                capture = {n: n for n in sig.parameters.keys()} | capture
             resolved_kwargs = resolve_bindings(
                 available_variables=available_variables,
-                capture=self.__capture_before,
+                capture=capture,
                 clone=self.__clone_before,
             )
 
@@ -128,10 +138,11 @@ class post:
             )
             # Implicitly capture result argument
             capture = self.__capture_after
-            result_name = self.__find_result_param()
-            if result_name is not None:
-                capture = {result_name: result_name} | capture
-                available_variables = [{result_name: result}] + available_variables
+            if _implicit_return_capture:
+                result_name = self.__find_result_param()
+                if result_name is not None:
+                    capture = {result_name: result_name} | capture
+                    available_variables = [{result_name: result}] + available_variables
             resolved_kwargs |= resolve_bindings(
                 available_variables=available_variables,
                 capture=capture,
