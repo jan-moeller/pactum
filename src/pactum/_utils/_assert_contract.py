@@ -38,7 +38,12 @@ def assert_contract(
     if semantic == EvaluationSemantic.ignore:
         return
 
-    pred_result = predicate(**predicate_kwargs)
+    kwargs = {
+        k: v
+        for k, v in predicate_kwargs.items()
+        if k in inspect.signature(predicate).parameters
+    }
+    pred_result = predicate(**kwargs)
     if not pred_result:
         __handle_contract_violation(
             semantic=semantic,
