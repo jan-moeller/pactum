@@ -21,6 +21,7 @@ from .handlers import ContractViolationHandler  # noqa: F401
 from ._post import post  # noqa: F401
 from ._pre import pre  # noqa: F401
 from ._predicate import Predicate  # noqa: F401
+from ._invariant import invariant  # noqa: F401
 
 __all__ = [
     "AssertionKind",
@@ -42,4 +43,5 @@ __all__ = [
     "post",
     "pre",
     "Predicate",
+    "invariant",
 ]

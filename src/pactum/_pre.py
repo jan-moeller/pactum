@@ -54,7 +54,13 @@ class pre:
             self.__parent_frame, AssertionKind.pre, labels
         )
 
-    def __call__[R](self, func: Callable[..., R], /) -> Callable[..., R]:
+    def __call__[R](
+        self,
+        func: Callable[..., R],
+        /,
+        *,
+        _implicit_arg_capture: bool = True,
+    ) -> Callable[..., R]:
         """Wraps the given callable in another callable that checks preconditions before executing the original callable
 
         Keyword arguments:
@@ -79,7 +85,9 @@ class pre:
                 nkwargs,
             )
             # Implicitly capture function arguments, but explicit captures take priority
-            capture = {n: n for n in sig.parameters.keys()} | self.__capture
+            capture = self.__capture
+            if _implicit_arg_capture:
+                capture = {n: n for n in sig.parameters.keys()} | capture
             resolved_kwargs = resolve_bindings(
                 available_variables=available_variables,
                 capture=capture,
