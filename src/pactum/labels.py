@@ -1,6 +1,6 @@
 import re
 from types import TracebackType
-from typing import Self, Literal, AnyStr
+from typing import Self, Literal
 
 from pactum._evaluation_semantic import EvaluationSemantic
 from pactum._assertion_kind import AssertionKind
