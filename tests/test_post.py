@@ -67,11 +67,12 @@ def test_post_predicate_with_capture():
     with pytest.raises(ContractViolationException):
         test(-2, 1)
 
-    with pytest.raises(TypeError):
+    @post(lambda result, z, y: True, capture_before={"z", "y"})
+    def test(x, y):
+        return abs(x + y)
 
-        @post(lambda result, z, y: True, capture_before={"z", "y"})
-        def test(x, y):
-            return abs(x + y)
+    with pytest.raises(TypeError):
+        test(1, 2)
 
     @post(lambda x: not x.append(0), capture_before={"x"})
     def test(x):
@@ -101,31 +102,32 @@ def test_post_exception():
 
 def test_post_predicate_invalid():
 
-    with pytest.raises(TypeError):
+    @post(lambda x, y: True)
+    def test():
+        pass
 
-        @post(lambda x, y: True)
-        def test():
-            pass
+    with pytest.raises(TypeError):
+        test()
 
 
 def test_post_capture_before_local():
 
-    x = 0
-
     @post(lambda x: x == 0, capture_before={"x"})
     def test():
         pass
+
+    x = 0
 
     test()
 
 
 def test_post_clone_before_local():
 
-    x = [0]
-
     @post(lambda x: x.pop() == 0, clone_before={"x"})
     def test():
         pass
+
+    x = [0]
 
     test()
 
@@ -154,24 +156,26 @@ def test_post_clone_before_global():
 
 def test_post_capture_after_local():
 
-    x = 42
-
     @post(lambda x: x == 0, capture_after={"x"})
     def test():
         nonlocal x
         x = 0
 
+    x = 42
+
     test()
+
+    assert x == 0
 
 
 def test_post_clone_after_local():
-
-    x = [42]
 
     @post(lambda x: x.pop() == 1, clone_after={"x"})
     def test():
         nonlocal x
         x[0] = 1
+
+    x = [42]
 
     test()
 
@@ -200,13 +204,22 @@ def test_post_clone_after_global():
 
 def test_post_capture_rename():
 
-    x = 0
-
     @post(lambda y: y == 0, capture_before={"y": "x"})
     def test():
         pass
 
+    x = 0
+
     test()
+
+
+def test_post_capture_before_and_after():
+
+    @post(lambda x, y: len(x) + 1 == len(y), clone_before={"x"}, clone_after={"y": "x"})
+    def test(x):
+        x.append(42)
+
+    test([42])
 
 
 def test_post_capture_wrong_type():

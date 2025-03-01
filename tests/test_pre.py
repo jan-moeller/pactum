@@ -135,35 +135,48 @@ def test_pre_exception():
 
 def test_pre_predicate_invalid():
 
-    with pytest.raises(TypeError):
+    @pre(lambda x: x == 0)
+    def test():
+        pass
 
-        @pre(lambda x: x == 0)
-        def test():
-            pass
+    with pytest.raises(TypeError):
+        test()
+
+
+def test_pre_explicit_capture_has_precedence():
+
+    @pre(lambda x: x == 0, capture={"x": "y"})
+    def test(x, y):
+        pass
+
+    test(1, 0)
+
+    with pytest.raises(ContractViolationException):
+        test(0, 1)
 
 
 def test_pre_capture_local():
 
-    x = 0
-
     @pre(lambda x: x == 0, capture={"x"})
     def test():
         pass
+
+    x = 0
 
     test()
 
 
 def test_pre_clone_local():
 
-    x = [0]
-
     @pre(lambda x: x.pop() == 0, clone={"x"})
     def test():
         pass
 
-    assert x == [0]
+    x = [0]
 
     test()
+
+    assert x == [0]
 
 
 def test_pre_capture_global():
@@ -188,11 +201,11 @@ def test_pre_clone_global():
 
 def test_pre_capture_rename():
 
-    x = 0
-
     @pre(lambda y: y == 0, capture={"y": "x"})
     def test():
         pass
+
+    x = 0
 
     test()
 
