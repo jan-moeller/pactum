@@ -111,11 +111,7 @@ class pre:
             assert_contract(
                 semantic=self.__semantic,
                 kind=AssertionKind.pre,
-                loc=(
-                    inspect.getframeinfo(self.__parent_frame)
-                    if self.__parent_frame is not None
-                    else None
-                ),
+                calling_frame=self.__parent_frame,
                 predicate=self.__predicate,
                 predicate_kwargs=resolved_kwargs,
             )
@@ -149,11 +145,7 @@ class pre:
         assert_contract(
             semantic=self.__semantic,
             kind=AssertionKind.pre,
-            loc=(
-                inspect.getframeinfo(self.__parent_frame)
-                if self.__parent_frame is not None
-                else None
-            ),
+            calling_frame=self.__parent_frame,
             predicate=self.__predicate,
             predicate_kwargs=resolved_kwargs,
         )

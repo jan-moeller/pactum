@@ -1,4 +1,5 @@
 import inspect
+from types import FrameType
 from typing import Any
 from pactum._evaluation_semantic import EvaluationSemantic
 from pactum._assertion_kind import AssertionKind
@@ -29,7 +30,7 @@ def __handle_contract_violation(
 def assert_contract(
     semantic: EvaluationSemantic,
     kind: AssertionKind,
-    loc: inspect.Traceback | None,
+    calling_frame: FrameType | None,
     predicate: Predicate,
     predicate_kwargs: dict[str, Any],
 ) -> None:
@@ -48,5 +49,9 @@ def assert_contract(
         __handle_contract_violation(
             semantic=semantic,
             kind=kind,
-            location=loc,
+            location=(
+                inspect.getframeinfo(calling_frame)
+                if calling_frame is not None
+                else None
+            ),
         )
