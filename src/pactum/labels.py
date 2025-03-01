@@ -15,6 +15,14 @@ def ignore(
     return EvaluationSemantic.ignore
 
 
+def check(
+    semantic: EvaluationSemantic,
+    info: ContractAssertionInfo,
+) -> EvaluationSemantic:
+    """A contract assertion label marking everything as checked"""
+    return EvaluationSemantic.check
+
+
 def ignore_postconditions(
     semantic: EvaluationSemantic,
     info: ContractAssertionInfo,
