@@ -6,38 +6,21 @@ from typing import Any, Self, Literal
 
 from pactum._evaluation_semantic import EvaluationSemantic
 from pactum._assertion_kind import AssertionKind
-from pactum._contract_violation_handler import get_contract_evaluation_semantic
 from pactum._utils._assert_contract import assert_contract
+from pactum._utils._effective_semantic import effective_semantic
 from pactum._utils._map_function_arguments import map_function_arguments
-from pactum._utils._resolve_bindings import resolve_bindings
-from pactum._predicate import Predicate, assert_predicate_well_formed
-from pactum._capture_set import CaptureSet, normalize_capture_set
-from pactum._contract_assertion_label import (
-    ContractAssertionLabel,
-    ContractAssertionInfo,
+from pactum._utils._parent_frame import get_parent_frame
+from pactum._utils._resolve_bindings import (
+    resolve_bindings,
+    collect_available_variables,
 )
+from pactum._predicate import Predicate
+from pactum._capture_set import CaptureSet, normalize_capture_set
+from pactum._contract_assertion_label import ContractAssertionLabel
 
 
 class post:
     """Postcondition assertion factory taking a predicate to evaluate after function evaluation"""
-
-    """Postcondition assertion decorator factory taking a predicate to evaluate after function evaluation
-
-    Keyword arguments:
-        predicate: A callable evaluating the predicate to check after function evaluation
-        capture_before: A set of names to capture before function evaluation. Variables by this name can be predicate parameters
-        capture_after: A set of names to capture after function evaluation. Variables by this name can be predicate parameters
-        clone_before: A set of names to clone before function evaluation. Variables by this name can be predicate parameters
-        clone_after: A set of names to clone after function evaluation. Variables by this name can be predicate parameters
-
-    Returns:
-        - The returned decorator raises TypeError if the predicate is malformed.
-        - Otherwise:
-
-          - if the current contract evaluation semantic is not `ignore`, returns a wrapper of the decorated function that
-            checks the predicate before evaluating the original function.
-          - if the current contract evaluation semantic is `ignore`, returns the decorated function unmodified.
-    """
 
     def __init__(
         self,
@@ -74,25 +57,12 @@ class post:
         self.__capture_after = capture_after
         self.__clone_before = clone_before
         self.__clone_after = clone_after
-        self.__pred_sig = inspect.signature(predicate)
-        self.__pred_params = self.__pred_sig.parameters
-        self.__parent_frame = inspect.currentframe()
-        if self.__parent_frame is not None:
-            self.__parent_frame = self.__parent_frame.f_back
-
-        module = inspect.getmodule(self.__parent_frame)
-        info = ContractAssertionInfo(
-            kind=AssertionKind.post,
-            module_name=module.__name__ if module is not None else "",
+        self.__parent_frame = get_parent_frame(inspect.currentframe())
+        self.__semantic = effective_semantic(
+            self.__parent_frame, AssertionKind.post, labels
         )
-        self.__semantic: EvaluationSemantic = get_contract_evaluation_semantic(info)
-        for label in labels:
-            self.__semantic = label(self.__semantic, info)
 
-        self.__bindings = capture_before | capture_after | clone_before | clone_after
-        self.__result_param_name = self.__find_result_param(set(self.__bindings.keys()))
-
-    def __find_result_param(self, bindings: set[str]) -> str | None:
+    def __find_result_param(self) -> str | None:
         """Given the predicate parameters `pred_params`, finds the one not in the set of bound names `bindings`.
 
         Returns `None` if there is no result parameter.
@@ -100,7 +70,14 @@ class post:
         Raises `TypeError` if there is more than one potential result parameter.
         """
 
-        candidates = {n for n in self.__pred_params.keys() if n not in bindings}
+        bindings = (
+            set(self.__capture_before.keys())
+            | set(self.__clone_before.keys())
+            | set(self.__capture_after.keys())
+            | set(self.__clone_after.keys())
+        )
+        params = inspect.signature(self.__predicate).parameters
+        candidates = {n for n in params.keys() if n not in bindings}
         match len(candidates):
             case 0:
                 return None
@@ -118,43 +95,25 @@ class post:
             func: Callable to wrap. Typically, a function.
 
         Returns:
-            - `func` if the current contract evaluation semantic is `ignore`
+            - `func` if the effective contract evaluation semantic is `ignore`
             - a checked wrapper compatible with `func` otherwise
-
-        Raises:
-            TypeError: if the predicate is malformed given `func` and the set of captured and cloned values.
         """
-        func_sig = inspect.signature(func)
-
-        variables_in_scope = set(func_sig.parameters.keys())
-        if self.__parent_frame is not None:
-            variables_in_scope |= set(self.__parent_frame.f_locals.keys())
-            variables_in_scope |= set(self.__parent_frame.f_globals.keys())
-
-        if self.__result_param_name is not None:
-            self.__bindings[self.__result_param_name] = self.__result_param_name
-            variables_in_scope.add(self.__result_param_name)
-
-        assert_predicate_well_formed(
-            self.__pred_params, self.__bindings, variables_in_scope
-        )
 
         if self.__semantic == EvaluationSemantic.ignore:
             return func
 
         @wraps(func)
         def checked_func(*args: Any, **kwargs: Any) -> R:
-            nkwargs = map_function_arguments(func_sig, args, kwargs)
+            sig = inspect.signature(func)
+            nkwargs = map_function_arguments(sig, args, kwargs)
 
             # resolve "before"-type bindings
-            candidate_bindings = [nkwargs]
-            if self.__parent_frame is not None:
-                candidate_bindings += [
-                    self.__parent_frame.f_locals,
-                    self.__parent_frame.f_globals,
-                ]
+            available_variables = collect_available_variables(
+                self.__parent_frame,
+                nkwargs,
+            )
             resolved_kwargs = resolve_bindings(
-                candidates=candidate_bindings,
+                available_variables=available_variables,
                 capture=self.__capture_before,
                 clone=self.__clone_before,
             )
@@ -163,15 +122,19 @@ class post:
             result = func(*args, **kwargs)
 
             # resolve "after"-type bindings
-            referenced_bindings = self.__capture_after
-            if self.__result_param_name is not None:
-                candidate_bindings = [
-                    {self.__result_param_name: result}
-                ] + candidate_bindings
-                referenced_bindings[self.__result_param_name] = self.__result_param_name
+            available_variables = collect_available_variables(
+                self.__parent_frame,
+                nkwargs,
+            )
+            # Implicitly capture result argument
+            capture = self.__capture_after
+            result_name = self.__find_result_param()
+            if result_name is not None:
+                capture = {result_name: result_name} | capture
+                available_variables = [{result_name: result}] + available_variables
             resolved_kwargs |= resolve_bindings(
-                candidates=candidate_bindings,
-                capture=referenced_bindings,
+                available_variables=available_variables,
+                capture=capture,
                 clone=self.__clone_after,
             )
 
@@ -189,26 +152,12 @@ class post:
         return checked_func
 
     def __enter__(self) -> Self:
-        """Captures any variables when the scope is entered
-
-        Raises:
-            TypeError: if the predicate is malformed given the set of captured and cloned values.
-        """
-
-        if self.__result_param_name is not None:
-            raise TypeError(
-                f'Postcondition refers to result "{self.__result_param_name}", but usage as context manager precludes result parameter usage'
-            )
+        """Captures before-type bindings when the scope is entered"""
 
         # resolve "before"-type bindings
-        self.__candidate_bindings = []
-        if self.__parent_frame is not None:
-            self.__candidate_bindings += [
-                self.__parent_frame.f_locals,
-                self.__parent_frame.f_globals,
-            ]
+        available_variables = collect_available_variables(self.__parent_frame, {})
         self.__resolved_kwargs = resolve_bindings(
-            candidates=self.__candidate_bindings,
+            available_variables=available_variables,
             capture=self.__capture_before,
             clone=self.__clone_before,
         )
@@ -220,17 +169,13 @@ class post:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> Literal[False]:
-        """Captures any variables, then checks all postconditions
-
-        Raises:
-            TypeError: if the predicate is malformed given the set of captured and cloned values.
-        """
+        """Captures after-type bindings, then checks the postcondition"""
 
         # resolve "after"-type bindings
-        referenced_bindings = self.__capture_after
+        available_variables = collect_available_variables(self.__parent_frame, {})
         self.__resolved_kwargs |= resolve_bindings(
-            candidates=self.__candidate_bindings,
-            capture=referenced_bindings,
+            available_variables=available_variables,
+            capture=self.__capture_after,
             clone=self.__clone_after,
         )
 
