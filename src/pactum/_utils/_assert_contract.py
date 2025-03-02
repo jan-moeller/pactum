@@ -12,6 +12,7 @@ def __handle_contract_violation(
     semantic: EvaluationSemantic,
     kind: AssertionKind,
     location: inspect.Traceback | None,
+    kwargs: dict[str, Any],
     comment: str = "",
 ) -> None:
     """Handles a contract violation by invoking the contract violation handler and/or terminating if required"""
@@ -21,6 +22,7 @@ def __handle_contract_violation(
         kind=kind,
         location=location,
         semantic=semantic,
+        kwargs=kwargs,
     )
 
     if semantic == EvaluationSemantic.check:
@@ -54,4 +56,5 @@ def assert_contract(
                 if calling_frame is not None
                 else None
             ),
+            kwargs=kwargs,
         )
