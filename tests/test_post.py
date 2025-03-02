@@ -6,6 +6,7 @@ from pactum import (
     post,
     labels,
     global_contract_assertion_label,
+    PostconditionScope,
 )
 
 THE_ANSWER = [42]
@@ -98,6 +99,41 @@ def test_post_exception():
 
     with pytest.raises(ValueError):
         test()
+
+
+def test_post_scope_exceptional_return():
+
+    @post(
+        lambda exc: type(exc) == ValueError, scope=PostconditionScope.ExceptionalReturn
+    )
+    def test(exc):
+        raise exc
+
+    with pytest.raises(ValueError):
+        test(ValueError())
+
+    with pytest.raises(ContractViolationException):
+        test(TypeError())
+
+
+def test_post_scope_always():
+
+    @post(lambda r: type(r) in [ValueError, int], scope=PostconditionScope.Always)
+    def test(val):
+        if isinstance(val, Exception):
+            raise val
+        return val
+
+    test(42)
+
+    with pytest.raises(ValueError):
+        test(ValueError())
+
+    with pytest.raises(ContractViolationException):
+        test(TypeError())
+
+    with pytest.raises(ContractViolationException):
+        test("something")
 
 
 def test_post_predicate_invalid():
@@ -239,6 +275,25 @@ def test_post_as_context_manager():
     ):
         x[0] = 3
     assert x == [3]
+
+
+def test_post_as_context_manager_scope_regular_exit():
+    x = [42]
+
+    with pytest.raises(ValueError):
+        with post(lambda x: x[0] == 0, capture_after={"x"}):
+            raise ValueError()
+
+
+def test_post_as_context_manager_scope_exceptional_exit():
+    x = [42]
+
+    with post(
+        lambda x: x[0] == 0,
+        capture_after={"x"},
+        scope=PostconditionScope.ExceptionalReturn,
+    ):
+        pass
 
 
 def test_post_with_label():

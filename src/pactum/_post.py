@@ -1,5 +1,6 @@
 import inspect
 from collections.abc import Callable
+from enum import Enum, Flag, auto
 from functools import wraps
 from types import TracebackType
 from typing import Any, Self, Literal
@@ -19,6 +20,14 @@ from pactum._capture_set import CaptureSet, normalize_capture_set
 from pactum._contract_assertion_label import ContractAssertionLabel
 
 
+class PostconditionScope(Flag):
+    """Holds information on when a postcondition should be evaluated."""
+
+    RegularReturn = auto()
+    ExceptionalReturn = auto()
+    Always = RegularReturn | ExceptionalReturn
+
+
 class post:
     """Postcondition assertion factory taking a predicate to evaluate after function evaluation"""
 
@@ -32,6 +41,7 @@ class post:
         clone_before: CaptureSet | None = None,
         clone_after: CaptureSet | None = None,
         labels: list[ContractAssertionLabel] | None = None,
+        scope: PostconditionScope = PostconditionScope.RegularReturn,
     ):
         """Initializes the precondition assertion factory
 
@@ -42,6 +52,7 @@ class post:
             clone_before: A set of names to clone before function evaluation. Variables by this name can be predicate parameters
             clone_after: A set of names to clone after function evaluation. Variables by this name can be predicate parameters
             labels: A list of labels that determine this assertion's evaluation semantic
+            scope: Determines whether the postcondition applies if the function returns regularly, with an exception, or both
         """
 
         capture_before = normalize_capture_set(capture_before)
@@ -57,6 +68,7 @@ class post:
         self.__capture_after = capture_after
         self.__clone_before = clone_before
         self.__clone_after = clone_after
+        self.__scope = scope
         self.__parent_frame = get_parent_frame(inspect.currentframe())
         self.__semantic = effective_semantic(
             self.__parent_frame, AssertionKind.post, labels
@@ -129,7 +141,17 @@ class post:
             )
 
             # evaluate decorated function
-            result = func(*args, **kwargs)
+            exception_raised = None
+            try:
+                result = func(*args, **kwargs)
+            except Exception as exc:
+                if PostconditionScope.ExceptionalReturn not in self.__scope:
+                    raise
+                exception_raised = exc
+                result = exc
+            else:
+                if PostconditionScope.RegularReturn not in self.__scope:
+                    return result
 
             # resolve "after"-type bindings
             available_variables = collect_available_variables(
@@ -158,7 +180,11 @@ class post:
                 predicate_kwargs=resolved_kwargs,
             )
 
-            return result
+            # If an exception was raised, re-raise it; otherwise, return the regular return value
+            if exception_raised is not None:
+                raise exception_raised
+            else:
+                return result
 
         return checked_func
 
@@ -181,6 +207,14 @@ class post:
         exc_tb: TracebackType | None,
     ) -> Literal[False]:
         """Captures after-type bindings, then checks the postcondition"""
+
+        exceptional_exit = exc_val is not None
+        if exceptional_exit:
+            if PostconditionScope.ExceptionalReturn not in self.__scope:
+                return False
+        else:
+            if PostconditionScope.RegularReturn not in self.__scope:
+                return False
 
         # resolve "after"-type bindings
         available_variables = collect_available_variables(self.__parent_frame, {})

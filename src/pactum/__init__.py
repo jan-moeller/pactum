@@ -18,7 +18,7 @@ from ._contract_violation_handler import (
 )
 from ._evaluation_semantic import EvaluationSemantic  # noqa: F401
 from .handlers import ContractViolationHandler  # noqa: F401
-from ._post import post  # noqa: F401
+from ._post import post, PostconditionScope  # noqa: F401
 from ._pre import pre  # noqa: F401
 from ._predicate import Predicate  # noqa: F401
 from ._invariant import invariant  # noqa: F401
@@ -29,19 +29,20 @@ __all__ = [
     "ContractAssertionLabel",
     "ContractViolation",
     "ContractViolationException",
-    "get_contract_violation_handler",
-    "set_contract_violation_handler",
+    "ContractViolationHandler",
+    "EvaluationSemantic",
+    "PostconditionScope",
+    "Predicate",
+    "contract_evaluation_semantic",
     "contract_violation_handler",
     "get_contract_evaluation_semantic",
-    "set_contract_evaluation_semantic",
-    "contract_evaluation_semantic",
+    "get_contract_violation_handler",
     "get_global_contract_assertion_label",
-    "set_global_contract_assertion_label",
     "global_contract_assertion_label",
-    "EvaluationSemantic",
-    "ContractViolationHandler",
+    "invariant",
     "post",
     "pre",
-    "Predicate",
-    "invariant",
+    "set_contract_evaluation_semantic",
+    "set_contract_violation_handler",
+    "set_global_contract_assertion_label",
 ]
