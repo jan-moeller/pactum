@@ -148,7 +148,6 @@ class post:
                 if PostconditionScope.ExceptionalReturn not in self.__scope:
                     raise
                 exception_raised = exc
-                result = exc
             else:
                 if PostconditionScope.RegularReturn not in self.__scope:
                     return result
@@ -162,9 +161,10 @@ class post:
             capture = self.__capture_after
             if _implicit_return_capture:
                 result_name = self.__find_result_param()
+                result_value = result if exception_raised is None else exception_raised
                 if result_name is not None:
                     capture = {result_name: result_name} | capture
-                    available_variables = [{result_name: result}] + available_variables
+                    available_variables.insert(0, {result_name: result_value})
             resolved_kwargs |= resolve_bindings(
                 available_variables=available_variables,
                 capture=capture,
