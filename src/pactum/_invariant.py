@@ -3,7 +3,7 @@ from types import TracebackType
 from typing import Self, Literal, Any
 
 from pactum._pre import pre
-from pactum._post import post
+from pactum._post import post, PostconditionScope
 from pactum._predicate import Predicate
 from pactum._capture_set import CaptureSet, normalize_capture_set
 from pactum._contract_assertion_label import ContractAssertionLabel
@@ -60,6 +60,7 @@ class invariant:
             capture_after=capture,
             clone_after=clone,
             labels=labels,
+            scope=PostconditionScope.Always,
         )
         # Hacky! Patch up internal parent frame to point to the correct parent, instead of this __init__ method
         parent_frame = get_parent_frame(inspect.currentframe())
