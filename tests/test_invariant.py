@@ -56,6 +56,23 @@ def test_invariant_predicate_false_before_or_after_method_call():
         t.bar()  # This breaks the invariant
 
 
+def test_invariant_broken_after_exception():
+    @invariant(lambda self: self.x > 0)
+    class Test:
+        def __init__(self):
+            self.x = 42
+
+        def foo(self, y):
+            self.x -= 100
+            self.x += 1000 / y  # Raises exception if y==0
+
+    t = Test()
+    t.foo(10)
+
+    with pytest.raises(ContractViolationException):
+        t.foo(0)
+
+
 def test_invariant_as_context_manager():
 
     x = 42
