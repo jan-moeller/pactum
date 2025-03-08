@@ -32,7 +32,7 @@ at certain points of the program.
 
 The four key concepts are:
 
-1. **[Contract Kind](/docs/contract_kinds)**  
+1. **[Contract Kind](/docs/contract_kinds.md)**  
    PyPactum knows preconditions, postconditions, and invariants.
 2. **[Predicate](/docs/predicates.md)**  
    Predicates encapsulate the condition that must be true for an assertion to hold.
