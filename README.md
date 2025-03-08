@@ -1,5 +1,7 @@
 # Pactum
 
+[![Python package](https://github.com/jan-moeller/pactum/actions/workflows/python-package.yml/badge.svg)](https://github.com/jan-moeller/pactum/actions/workflows/python-package.yml)
+
 Pactum is a Python library designed to help both library implementers and their users to write
 correct code. It provides decorators for adding contract annotations, serving multiple purposes:
 
