@@ -87,6 +87,23 @@ def test_invariant_on_dataclass():
         f = Foo(-1)
 
 
+def test_two_invariants():
+    @invariant(lambda self: self.x > 0)
+    @invariant(lambda self: self.y < 0)
+    class Test:
+        def __init__(self, x, y):
+            self.x = x
+            self.y = y
+
+    t = Test(1, -1)
+
+    with pytest.raises(ContractViolationException):
+        Test(0, -1)
+
+    with pytest.raises(ContractViolationException):
+        Test(1, 1)
+
+
 def test_invariant_as_context_manager():
 
     x = 42
