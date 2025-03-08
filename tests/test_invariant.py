@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import pytest
 
 from pactum import (
@@ -71,6 +73,18 @@ def test_invariant_broken_after_exception():
 
     with pytest.raises(ContractViolationException):
         t.foo(0)
+
+
+def test_invariant_on_dataclass():
+    @invariant(lambda self: self.foo > 0)
+    @dataclass
+    class Foo:
+        foo: int
+
+    f = Foo(42)
+
+    with pytest.raises(ContractViolationException):
+        f = Foo(-1)
 
 
 def test_invariant_as_context_manager():
