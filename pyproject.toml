@@ -1,6 +1,6 @@
 [project]
 name = "pypactum"
-version = "0.3.1"
+version = "0.3.2"
 requires-python = ">= 3.13"
 readme = "README.md"
 dependencies = []
