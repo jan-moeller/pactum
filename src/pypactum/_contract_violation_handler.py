@@ -2,13 +2,13 @@ from contextlib import ContextDecorator
 from types import TracebackType
 from typing import Self, Literal
 
-from pactum._contract_violation import ContractViolation
-from pactum._evaluation_semantic import EvaluationSemantic
-from pactum._contract_assertion_label import (
+from pypactum._contract_violation import ContractViolation
+from pypactum._evaluation_semantic import EvaluationSemantic
+from pypactum._contract_assertion_label import (
     ContractAssertionLabel,
     ContractAssertionInfo,
 )
-from pactum.handlers import raise_on_contract_violation, ContractViolationHandler
+from pypactum.handlers import raise_on_contract_violation, ContractViolationHandler
 
 __contract_violation_handler: ContractViolationHandler = raise_on_contract_violation
 __global_evaluation_semantic: EvaluationSemantic = EvaluationSemantic.check

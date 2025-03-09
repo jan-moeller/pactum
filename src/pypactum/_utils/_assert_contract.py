@@ -1,11 +1,11 @@
 import inspect
 from types import FrameType
 from typing import Any
-from pactum._evaluation_semantic import EvaluationSemantic
-from pactum._assertion_kind import AssertionKind
-from pactum._contract_violation import ContractViolation
-from pactum._contract_violation_handler import invoke_contract_violation_handler
-from pactum._predicate import Predicate
+from pypactum._evaluation_semantic import EvaluationSemantic
+from pypactum._assertion_kind import AssertionKind
+from pypactum._contract_violation import ContractViolation
+from pypactum._contract_violation_handler import invoke_contract_violation_handler
+from pypactum._predicate import Predicate
 
 
 def __handle_contract_violation(

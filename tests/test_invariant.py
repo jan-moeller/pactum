@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from pactum import (
+from pypactum import (
     ContractViolationException,
     invariant,
 )

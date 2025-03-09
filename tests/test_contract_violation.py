@@ -1,6 +1,6 @@
 import inspect
 
-from pactum import (
+from pypactum import (
     AssertionKind,
     ContractViolation,
     EvaluationSemantic,

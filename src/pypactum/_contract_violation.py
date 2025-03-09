@@ -1,8 +1,8 @@
 import inspect
 from typing import Any
 
-from pactum._assertion_kind import AssertionKind
-from pactum._evaluation_semantic import EvaluationSemantic
+from pypactum._assertion_kind import AssertionKind
+from pypactum._evaluation_semantic import EvaluationSemantic
 
 
 class ContractViolation:

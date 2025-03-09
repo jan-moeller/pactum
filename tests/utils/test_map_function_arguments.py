@@ -2,7 +2,7 @@ import inspect
 
 import pytest
 
-from pactum._utils._map_function_arguments import map_function_arguments
+from pypactum._utils._map_function_arguments import map_function_arguments
 
 
 def test_map_function_arguments():

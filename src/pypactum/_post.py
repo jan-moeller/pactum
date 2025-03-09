@@ -5,19 +5,19 @@ from functools import wraps
 from types import TracebackType
 from typing import Any, Self, Literal
 
-from pactum._evaluation_semantic import EvaluationSemantic
-from pactum._assertion_kind import AssertionKind
-from pactum._utils._assert_contract import assert_contract
-from pactum._utils._effective_semantic import effective_semantic
-from pactum._utils._map_function_arguments import map_function_arguments
-from pactum._utils._parent_frame import get_parent_frame
-from pactum._utils._resolve_bindings import (
+from pypactum._evaluation_semantic import EvaluationSemantic
+from pypactum._assertion_kind import AssertionKind
+from pypactum._utils._assert_contract import assert_contract
+from pypactum._utils._effective_semantic import effective_semantic
+from pypactum._utils._map_function_arguments import map_function_arguments
+from pypactum._utils._parent_frame import get_parent_frame
+from pypactum._utils._resolve_bindings import (
     resolve_bindings,
     collect_available_variables,
 )
-from pactum._predicate import Predicate
-from pactum._capture_set import CaptureSet, normalize_capture_set
-from pactum._contract_assertion_label import ContractAssertionLabel
+from pypactum._predicate import Predicate
+from pypactum._capture_set import CaptureSet, normalize_capture_set
+from pypactum._contract_assertion_label import ContractAssertionLabel
 
 
 class PostconditionScope(Flag):

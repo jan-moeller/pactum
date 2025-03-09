@@ -2,12 +2,12 @@ import inspect
 from types import TracebackType
 from typing import Self, Literal, Any
 
-from pactum._pre import pre
-from pactum._post import post, PostconditionScope
-from pactum._predicate import Predicate
-from pactum._capture_set import CaptureSet, normalize_capture_set
-from pactum._contract_assertion_label import ContractAssertionLabel
-from pactum._utils._parent_frame import get_parent_frame
+from pypactum._pre import pre
+from pypactum._post import post, PostconditionScope
+from pypactum._predicate import Predicate
+from pypactum._capture_set import CaptureSet, normalize_capture_set
+from pypactum._contract_assertion_label import ContractAssertionLabel
+from pypactum._utils._parent_frame import get_parent_frame
 
 
 class invariant:

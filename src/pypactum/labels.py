@@ -2,9 +2,9 @@ import re
 from types import TracebackType
 from typing import Self, Literal
 
-from pactum._evaluation_semantic import EvaluationSemantic
-from pactum._assertion_kind import AssertionKind
-from pactum._contract_assertion_label import ContractAssertionInfo
+from pypactum._evaluation_semantic import EvaluationSemantic
+from pypactum._assertion_kind import AssertionKind
+from pypactum._contract_assertion_label import ContractAssertionInfo
 
 
 def ignore(

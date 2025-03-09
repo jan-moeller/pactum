@@ -4,8 +4,8 @@ from collections.abc import Callable
 from io import TextIOWrapper
 from typing import TextIO
 
-from pactum._contract_violation import ContractViolation
-from pactum._contract_violation_exception import ContractViolationException
+from pypactum._contract_violation import ContractViolation
+from pypactum._contract_violation_exception import ContractViolationException
 
 type ContractViolationHandler = Callable[[ContractViolation], None]
 

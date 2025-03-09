@@ -2,7 +2,7 @@ from warnings import deprecated
 
 import pytest
 
-from pactum import (
+from pypactum import (
     ContractViolationException,
     pre,
     post,

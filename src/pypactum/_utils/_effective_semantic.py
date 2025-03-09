@@ -1,13 +1,13 @@
 import inspect
 from types import FrameType
 
-from pactum._contract_violation_handler import get_contract_evaluation_semantic
-from pactum._assertion_kind import AssertionKind
-from pactum._contract_assertion_label import (
+from pypactum._contract_violation_handler import get_contract_evaluation_semantic
+from pypactum._assertion_kind import AssertionKind
+from pypactum._contract_assertion_label import (
     ContractAssertionInfo,
     ContractAssertionLabel,
 )
-from pactum._evaluation_semantic import EvaluationSemantic
+from pypactum._evaluation_semantic import EvaluationSemantic
 
 
 def effective_semantic(

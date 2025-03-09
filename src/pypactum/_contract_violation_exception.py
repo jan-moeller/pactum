@@ -1,4 +1,4 @@
-from pactum._contract_violation import ContractViolation
+from pypactum._contract_violation import ContractViolation
 
 
 class ContractViolationException(Exception):
